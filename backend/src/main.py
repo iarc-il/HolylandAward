@@ -3,6 +3,8 @@ import uvicorn
 import adif_io
 import os
 
+from utils import qso_to_dict, get_required_fields
+
 app = FastAPI()
 
 
@@ -18,10 +20,15 @@ async def upload_file(file: UploadFile = File(...)):
         f.write(contents)
 
     qsos, header = adif_io.read_from_file(f"temp_{file.filename}")
-    print(qsos, header)
+
+    parsed_qsos = []
+    for qso in qsos:
+        parsed = qso_to_dict(qso)
+        print(parsed)
+        parsed_qsos.append(get_required_fields(parsed))
 
     os.remove(f"temp_{file.filename}")
-    return {"qsos": qsos, "header": header}
+    return {"qsos": parsed_qsos}
 
 
 def main():
