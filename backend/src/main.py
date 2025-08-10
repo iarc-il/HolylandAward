@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File
 import uvicorn
 import adif_io
 import os
-
+from adif_service import AdifService
 
 app = FastAPI()
 
@@ -13,20 +13,16 @@ def read_root():
 
 
 @app.post("/read-file")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), spotter_callsign: str = "4Z1KD"):
     contents = await file.read()
     with open(f"temp_{file.filename}", "wb") as f:
         f.write(contents)
 
     qsos, header = adif_io.read_from_file(f"temp_{file.filename}")
-
-    squares = []
-    for qso in qsos:
-        parsed = qso_to_dict(qso)
-        squares.append(get_squares_from_qso(parsed))
-
+    adif_service = AdifService(qsos, spotter_callsign=spotter_callsign)
+    valid_entries = adif_service.get_valid_entries()
     os.remove(f"temp_{file.filename}")
-    return squares
+    return valid_entries
 
 
 def main():
