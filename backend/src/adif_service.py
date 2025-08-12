@@ -1,5 +1,6 @@
 import re
-from backend.src.area_grids import SQUARES
+from area_grids import AREAS
+from qsos.schema import QSO
 
 
 class AdifService:
@@ -47,7 +48,7 @@ class AdifService:
             for word in value.split():
                 if len(word) == 5:
                     region_key = word[-2:]  # Last 2 characters
-                    if region_key in SQUARES and word in SQUARES[region_key]:
+                    if region_key in AREAS and word in AREAS[region_key]:
                         return word
             return ""
 
@@ -77,7 +78,7 @@ class AdifService:
             return self.spotter_callsign
         return ""  # No spotter found
 
-    def get_valid_entries(self) -> list:
+    def get_valid_entries(self) -> list[QSO]:
         """
         Get all valid entries from the QSO list.
         """

@@ -1,4 +1,4 @@
-SQUARES = {
+AREAS = {
     "AK": [
         "H03AK",
         "H04AK",
