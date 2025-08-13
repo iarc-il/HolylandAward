@@ -36,6 +36,15 @@ def read_root():
     return {"Hello": "Worldddd"}
 
 
+# get all areas of a spotter
+@app.get("/areas/{spotter_callsign}")
+def get_all_areas(
+    spotter_callsign: str, repo: QSORepository = Depends(get_qso_repository)
+):
+    areas = repo.get_areas_by_spotter(spotter_callsign)
+    return {"areas": areas}
+
+
 @app.post("/read-file")
 async def upload_file(
     file: UploadFile = File(...),

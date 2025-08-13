@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import select
 from qsos.models import QSOLogs
 from qsos.schema import QSO, QSOResponse
 
@@ -43,3 +44,10 @@ class QSORepository:
         """Get all QSO entries for a specific spotter."""
         qso_records = self.db.query(QSOLogs).filter(QSOLogs.spotter == spotter).all()
         return [QSOResponse.model_validate(qso) for qso in qso_records]
+
+    def get_areas_by_spotter(self, spotter: str) -> list[str]:
+        """Get all areas for a specific spotter."""
+        stmt = select(QSOLogs.area).where(QSOLogs.spotter == spotter).distinct()
+        result = self.db.execute(stmt)
+        areas = result.scalars().all()
+        return list(areas)
