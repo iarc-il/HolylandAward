@@ -4,7 +4,7 @@ import adif_io
 import os
 from contextlib import asynccontextmanager
 from adif_service import AdifService
-from database import get_db, engine, Base
+from database import get_db
 from qsos.qsos_repository import QSORepository
 from qsos.schema import QSO
 from sqlalchemy.orm import Session
@@ -14,10 +14,8 @@ from sqlalchemy.orm import Session
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    from qsos.models import QSOLogs
-
-    Base.metadata.create_all(bind=engine)
-    print("Database tables created successfully!")
+    print("Application starting up...")
+    print("Note: Run 'uv run alembic upgrade head' to apply migrations")
 
     yield
 
