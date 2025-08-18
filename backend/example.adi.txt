@@ -1,0 +1,7 @@
+<ADIF_VERS:3>3.1 
+<PROGRAMID:10>HolyLogger 
+<PROGRAMVERSION:7>8.0.1.0 
+<EOH>
+
+<station_callsign:5>4Z1KD <call:5>4Z5SL <name:11>Dan Katzman <country:6>Israel <freq:9>28.427000 <band:4>10M <mode:3>SSB <submode:0> <rst_rcvd:2>59 <rst_sent:2>59 <qso_date:8>20250804 <time_on:6>025151 <time_off:6>025151 <comment:12>T K0-7-YZ <my_gridsquare:6>KM72TV <gridsquare:6>KM72OR <operator:5>4Z1KD <srx_string:5>K07YZ <stx_string:5>N05KT <sig:5>K07YZ <my_sig:5>N05KT <prop_mode:0> <sat_name:0> <soapbox:55>9738e482-a401-4630-8227-ba51f1ea58bc 638898728612908219 <EOR>
+<station_callsign:5>4Z1KD <call:5>4Z5SL <name:11>Dan Katzman <country:6>Israel <freq:9>28.427000 <band:4>10M <mode:3>SSB <submode:0> <rst_rcvd:2>59 <rst_sent:2>59 <qso_date:8>20250804 <time_on:6>025151 <time_off:6>025151 <comment:12>Tnx QSO, 73! <my_gridsquare:6>KM72TV <gridsquare:6>KM72OR <operator:5>4Z1KD <srx_string:5>K07YZ <stx_string:5>N05KT <sig:5>K07YZ <my_sig:5>N05KT <prop_mode:0> <sat_name:0> <soapbox:55>9738e482-a401-4630-8227-ba51f1ea58bc 638898728612908219 <EOR>
