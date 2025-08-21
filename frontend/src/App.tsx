@@ -61,25 +61,17 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <SidebarProvider>
-          <div className="flex min-h-screen w-full">
+          <div className="flex h-screen w-full">
             <AppSidebar />
-            <main className="flex-1">
-              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                <SidebarTrigger className="-ml-1" />
-                <div className="text-lg font-semibold">
-                  HolyLand Award Manager
-                </div>
-              </header>
-              <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min p-6">
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/upload" element={<UploadPage />} />
-                    <Route path="/logs" element={<LogsPage />} />
-                    <Route path="/awards" element={<AwardsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                  </Routes>
-                </div>
+            <main className="flex-1 h-screen">
+              <div className="flex flex-1 flex-col gap-4 p-4 pt-0 h-screen">
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/upload" element={<UploadPage />} />
+                  <Route path="/logs" element={<LogsPage />} />
+                  <Route path="/awards" element={<AwardsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Routes>
               </div>
             </main>
           </div>

@@ -1,6 +1,6 @@
-import { Button } from "@ui/button"
+import { Button } from "@ui/button";
 
-import React, { useRef } from 'react';
+import React, { useRef } from "react";
 // const UploadPage = () => (
 //   <div className="flex flex-col space-y-4">
 //     <h1 className="text-3xl font-bold">Upload ADIF File</h1>
@@ -11,10 +11,11 @@ import React, { useRef } from 'react';
 
 // export default UploadPage
 
-
+import useAdifUpload from "@/hooks/useFileUpload";
 
 const FileUploader = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { mutate: uploadFile } = useAdifUpload();
 
   const handleClick = () => {
     // Check if the ref has a current value and then simulate a click
@@ -25,23 +26,23 @@ const FileUploader = () => {
     // Get the selected files from the event
     const files = event.target.files;
     if (files) {
-      console.log('Selected files:', files);
-      // You can now process the files here
+      const file = files[0]; // Assuming single file upload
+      uploadFile({ file, spotter: "4Z1KD" });
     }
   };
 
   return (
-    <div>
-      <Button onClick={handleClick}>
-        Upload File
-      </Button>
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        style={{ display: 'none' }} // Hide the input element
-      />
+    <div className="flex items-center justify-center h-screen">
+      <div>
+        <Button onClick={handleClick}>Upload File</Button>
+        <input
+          type="file"
+          accept=".adif,.txt,.adi"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          style={{ display: "none" }} // Hide the input element
+        />
+      </div>
     </div>
   );
 };

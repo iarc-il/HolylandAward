@@ -18,7 +18,7 @@ const postAdif = async (file: File, spotterCallsign = '4Z1KD'): Promise<UploadRe
   const formData = new FormData()
   formData.append('file', file) // field name must be "file" to match UploadFile=File(...)
 
-  const res = await fetch(`/read-file?spotter_callsign=${encodeURIComponent(spotterCallsign)}`, {
+  const res = await fetch(`http://localhost:1293/read-file?spotter_callsign=${encodeURIComponent(spotterCallsign)}`, {
     method: 'POST',
     body: formData,
   })

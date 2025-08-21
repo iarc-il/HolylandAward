@@ -8,6 +8,10 @@ from database import get_db
 from qsos.qsos_repository import QSORepository
 from qsos.schema import QSO
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
+
+
+origins = ["http://localhost:5173"]
 
 
 @asynccontextmanager
@@ -24,6 +28,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Dependency function to get repository
