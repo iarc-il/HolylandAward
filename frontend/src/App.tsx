@@ -4,6 +4,7 @@ import AppSidebar from "./components/AppSidebar";
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import UploadPage from "./components/UploadPage";
+import Map from "./components/Map";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 // Page components
 const Dashboard = () => (
@@ -68,6 +69,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/upload" element={<UploadPage />} />
+                  <Route path="/map" element={<Map />} />
                   <Route path="/logs" element={<LogsPage />} />
                   <Route path="/awards" element={<AwardsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />

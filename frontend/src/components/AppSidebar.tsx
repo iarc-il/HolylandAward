@@ -9,8 +9,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { Home, Upload, FileText, Settings, Trophy } from "lucide-react"
+} from "@/components/ui/sidebar";
+import { Home, Upload, Map, FileText, Settings, Trophy } from "lucide-react";
 
 // Menu items for the sidebar
 const items = [
@@ -23,6 +23,11 @@ const items = [
     title: "Upload ADIF",
     url: "/upload",
     icon: Upload,
+  },
+  {
+    title: "Map",
+    url: "/map",
+    icon: Map,
   },
   {
     title: "QSO Logs",
@@ -39,7 +44,7 @@ const items = [
     url: "/settings",
     icon: Settings,
   },
-]
+];
 
 const AppSidebar = () => {
   return (
@@ -74,7 +79,7 @@ const AppSidebar = () => {
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
-}
+  );
+};
 
-export default AppSidebar
+export default AppSidebar;

@@ -1,0 +1,704 @@
+
+<!DOCTYPE html>
+<html>
+
+<!-- Mirrored from 67.222.56.236/holysquare/ by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 04 Nov 2018 15:18:38 GMT -->
+<head>
+	<!-- Google tag (gtag.js) -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-3SGNEMM0KG"></script>
+	<script>
+	  window.dataLayer = window.dataLayer || [];
+	  function gtag(){dataLayer.push(arguments);}
+	  gtag('js', new Date());
+
+	  gtag('config', 'G-3SGNEMM0KG');
+	</script>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="icon" type="image/x-icon" href="./favicon.ico">
+
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
+	
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-migrate-3.0.1.min.js" integrity="sha256-F0O1TmEa4I8N24nY0bya59eP6svWcshqX1uzwaWC4F4=" crossorigin="anonymous"></script>
+    <!-- <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=drawing,geometry,places"></script> -->
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCh2kmmsmg56fDhFxACLeRURnkp7gVeAHo&callback=console.debug&libraries=maps,marker,places,geometry&v=beta" type="text/javascript"></script>
+	
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/jsts.min.js.map"></script>
+	<script type="text/javascript" src="js/distanceToLine.js"></script>
+	
+	<script type="text/javascript" src="js/areas.js"></script>
+	
+	
+	
+    <script type="text/javascript">
+        jQuery(document).ready(function () {
+			//Set click event to the button
+			$('#getSquareBtn').on('click', function () {
+				$btn = $(this).button('loading'); //set to "Loading" state
+				getMySquare();//Do your thing!
+			});
+			$('#getSquareBtn').click();
+        });
+		
+    </script>
+	
+    <title>HolySquare</title>
+
+    <!-- Meta -->
+    <meta name="description" content="My Holyland Square">
+
+    <style type="text/css">
+        .map {
+            width: 100%;
+            height: 90vh;
+			max-height: 90vh;
+            border-top: solid 1px #eee;
+            border-bottom: solid 1px #eee;
+        }
+
+            /* important! bootstrap sets max-width on img to 100% which conflicts with google map canvas*/
+            .map img {
+                max-width: none;
+            }
+
+        .map-box {
+            height: 90vh;
+			max-height: 90vh;
+        }
+
+        .map-box-space {
+            margin-top: 15px;
+        }
+
+        .map-box-space1 {
+            margin-top: 7px;
+        }
+		
+		.pac-card {
+        margin: 10px 10px 0 0;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        background-color: #fff;
+        font-family: Roboto;
+		
+      }
+
+      #pac-container {
+        padding-bottom: 12px;
+        margin-right: 12px;
+      }
+	  
+	  .pac-container {
+		z-index: 9999;
+      }
+
+      .pac-controls {
+        display: inline-block;
+        padding: 5px 11px;
+      }
+
+      .pac-controls label {
+        font-family: Roboto;
+        font-size: 13px;
+        font-weight: 300;
+      }
+
+      #pac-input {
+        background-color: #fff;
+        font-weight: 300;
+        margin-left: 5px;
+		margin-top: 0px;
+        padding: 0 11px 0 13px;
+        width: 150px;
+      }
+
+      #pac-input:focus {
+        border-color: #4d90fe;
+      }
+	  
+	  .square-label {
+        position: absolute;
+        white-space: nowrap;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        color: #666666;
+        font-weight: bold;
+		opacity: 0.4;
+      }
+	  
+	  .area-label {
+        position: absolute;
+        white-space: nowrap;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        color: #FF0055;
+        font-weight: bold;
+		opacity: 0.4;
+      }
+    </style>
+
+</head>
+<body>
+<div>
+    <nav class="navbar navbar-default navbar-fixed-top">
+		<div style="margin: 5px">
+		<!-- <button onclick="getMySquare()">Get Square</button> -->
+		<button type="button" id="getSquareBtn" data-loading-text="Calculating..." class="btn btn-primary" autocomplete="off">
+		<span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span>&nbsp;&nbsp;Get my Square</button>
+		&nbsp;<span id="square"></span>&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;<span id="locator"></span>
+		<input id="pac-input" class="controls" type="text" placeholder="Search Box">
+		</div>
+	</nav>
+    <div id="map-canvas" class="map"></div>
+	<!-- <div style="position:fixed; bottom: 0; background-color:#555555; color:#ffffff; text-align:center; width:100%; height:80px;">
+	<span>Gil (4Z1KD), Holyland 2017</span>
+	</div> -->
+</div>
+    <!-- JS Global Compulsory -->
+    <script type="text/javascript">
+	
+		
+		var map; //holds the map object
+		var marker; //holds the marker object
+		
+        var getAreaByPosition = function (position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            return getAreaByLatLng(lat, lng);
+        }
+
+		var northLat = 33.383;
+		var southLat = 29.426;
+		var westLng = 34.245;
+		var eastLng = 35.9682;
+		
+		var latSquareSize = (southLat - northLat) / 44;
+		var lngSquareSize = (eastLng - westLng) / 16;
+		
+		
+		var getLatIndex = function (lat)
+		{
+			var latIndex = (lat - northLat) * (1/latSquareSize);
+            latIndex = parseInt(latIndex);
+			return latIndex;
+		}
+		var getLngIndex = function (lng)
+		{
+			var lngIndex = (lng - westLng) * (1/lngSquareSize);
+            lngIndex = parseInt(lngIndex);
+			return lngIndex;
+		}
+		
+        var getAreaByLatLng = function (lat, lng) {
+			DrawData(lat,lng);
+            
+			var square = getSquareByLatLng(lat, lng);
+            var areaCode = 'XX';
+			var region = getRegionByLatLng(lat, lng);
+			
+            return square + region.name;
+        }
+		
+		var getSquareByLatLng = function (lat, lng) {
+            var latProjection = getLatIndex(lat);
+            var lngProjection = getLngIndex(lng);
+			
+			if (latProjection < 10) {
+                latProjection = '0' + latProjection;
+            }
+            if (lngProjection > 7) lngProjection++;
+            lngProjection = String.fromCharCode(65 + lngProjection);
+            var square = lngProjection + latProjection;	
+            return square;
+        }
+		
+		var getRegionByLatLng = function (lat, lng) {
+            var region;
+            ko.utils.arrayForEach(Areas(), function (item) {
+                if (google.maps.geometry && google.maps.geometry.poly.containsLocation(new google.maps.LatLng(lat, lng), item.poly))
+				{
+                    region = item;
+					return true;
+				}
+            });
+            return region;
+        }
+		
+		function parseCode(code) {
+		  const match = code.match(/^([A-Z])(\d\d)([A-Z]{2})$/);
+		  if (!match) {
+			throw new Error("Invalid format");
+		  }
+
+		  const [, letter, numberStr, suffix] = match;
+
+		  // Alphabet index (skipping 'I')
+		  const alphabet = 'ABCDEFGHJKLMNOPQRSTUVWXYZ'; // Note: 'I' is skipped
+		  const letterIndex = alphabet.indexOf(letter.toUpperCase());
+		  if (letterIndex === -1) {
+			throw new Error("Invalid letter (possibly 'I')");
+		  }
+
+		  // Parse number
+		  const numberIndex = parseInt(numberStr, 10);
+
+		  // Find suffix in the area list by name
+		  const Area = Areas().find(area => area.name.toUpperCase() === suffix.toUpperCase());
+		  if (!Area) {
+			throw new Error("Suffix not found in area list");
+		  }
+
+		  return [numberIndex, letterIndex, Area.poly];
+		}
+
+
+		class TextOverlay extends google.maps.OverlayView {
+          constructor(position, text, className, zoom_factor=12) {
+            super();
+            this.position = position;
+            this.text = text;
+            this.div = null;
+			this.className = className;
+			this.zoom_factor = zoom_factor;
+          }
+
+          onAdd() {
+            this.div = document.createElement("div");
+            this.div.className = this.className;
+            this.div.innerText = this.text;
+            this.getPanes().overlayLayer.appendChild(this.div);
+          }
+
+          draw() {
+            const projection = this.getProjection();
+            const pos = projection.fromLatLngToDivPixel(this.position);
+
+            if (this.div) {
+              this.div.style.left = `${pos.x}px`;
+              this.div.style.top = `${pos.y}px`;
+
+              // Scale font size relative to zoom
+              const zoom = this.getMap().getZoom();
+              const size = (zoom-9)*this.zoom_factor+10; // tweak as needed
+              this.div.style.fontSize = `${size}px`;
+			  //console.log(zoom);
+            }
+          }
+
+          onRemove() {
+            if (this.div) {
+              this.div.remove();
+              this.div = null;
+            }
+          }
+        }
+		
+        var initMap = function (position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            var mapOptions = { center: new google.maps.LatLng(lat, lng), zoom: 11, minZoom: 9, maxZoom: 14 };
+            map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+			var clientHeight = document.documentElement.clientHeight;
+			$('#map-canvas').height(clientHeight);
+			google.maps.event.trigger(map, 'resize');
+			ko.utils.arrayForEach(Areas(), function (area) {
+                area.poly.setMap(map);
+				google.maps.event.addListener(area.poly, "click", function(event) {
+					var lat = event.latLng.lat();
+					var lng = event.latLng.lng();
+					$('#square').html(getAreaByLatLng(lat, lng));
+					
+					/************** new polygon ******************/
+					PaintSquareByLatLng(lat, lng);
+				});
+            });
+			
+			// Create the search box and link it to the UI element.
+			var input = document.getElementById('pac-input');
+			var searchBox = new google.maps.places.SearchBox(input);
+			<!-- map.controls[google.maps.ControlPosition.TOP_LEFT].push(input); -->
+
+			// Bias the SearchBox results towards current map's viewport.
+			map.addListener('bounds_changed', function() {
+			  searchBox.setBounds(map.getBounds());
+			});
+			
+			searchBox.addListener('places_changed', function() {
+			  var places = searchBox.getPlaces();
+			  var bounds = new google.maps.LatLngBounds();
+
+			  if (places.length == 0) {
+				return;
+			  }
+			  var place = places[0];
+			  if (place.geometry.viewport) {
+				  // Only geocodes have viewport.
+				  bounds.union(place.geometry.viewport);
+				} else {
+				  bounds.extend(place.geometry.location);
+				}
+			  //map.fitBounds(bounds);
+			  map.panTo({lat: place.geometry.location.lat(), lng: place.geometry.location.lng()});
+			  map.setZoom(16);
+			  
+			  $('#square').html(getAreaByLatLng(place.geometry.location.lat(), place.geometry.location.lng()));
+			});
+      
+						
+			var PaintSquareByLatLng = function(lat, lng)
+			{			
+				var latProjection = getLatIndex(lat);
+				var lngProjection = getLngIndex(lng);
+				var regionPolygon = getRegionByLatLng(lat,lng).poly;
+				PaintSquare(latProjection, lngProjection, regionPolygon);
+			}
+			
+			var PaintSquareByCode = function(code)
+			{			
+				[latProjection, lngProjection, regionPolygon] = parseCode(code)
+				var exist = PaintSquare(latProjection, lngProjection, regionPolygon);
+				if (!exist)
+				{
+					console.log("Not Exist: " + code);
+				}
+				//console.log("~" + code + "~");
+			}
+			
+			var PaintSquare = function(latProjection, lngProjection, regionPolygon)
+			{				
+				var SquareCoords = [
+				  {lat: northLat + latProjection*latSquareSize, lng: westLng + lngProjection*lngSquareSize},
+				  {lat: northLat + (latProjection+1)*latSquareSize, lng: westLng + lngProjection*lngSquareSize},
+				  {lat: northLat + (latProjection+1)*latSquareSize, lng: westLng + (lngProjection+1)*lngSquareSize},
+				  {lat: northLat + latProjection*latSquareSize, lng: westLng + (lngProjection+1)*lngSquareSize},
+				];
+				
+				var squarePolygon = new google.maps.Polygon({
+				  paths: SquareCoords,
+				  strokeColor: '#FF0000',
+				  strokeOpacity: 0,
+				  strokeWeight: 2,
+				  fillColor: '#FF0000',
+				  fillOpacity: 0.2,
+				  zIndex: 999,
+				});
+				
+				//calc polygons intersection
+				var geometryFactory = new jsts.geom.GeometryFactory();
+				var jstsSquarePolygon = createJstsPolygon(geometryFactory, squarePolygon);
+				var jstsRegionPolygon = createJstsPolygon(geometryFactory, regionPolygon);
+				var intersection = jstsSquarePolygon.intersection(jstsRegionPolygon);
+				
+				var coords = intersection.getCoordinates().map(function (coord) {
+					return { lat: coord.x, lng: coord.y };
+				});
+
+				var intersectionArea = new google.maps.Polygon({
+					paths: coords,
+					strokeColor: '#FF0000',
+					strokeOpacity: 0,
+					strokeWeight: 2,
+					fillColor: '#FF0000',
+					fillOpacity: 0.2,
+					zIndex: 999,
+				});
+				intersectionArea.setMap(map);
+				
+				if(coords.length == 0)
+					return false;
+				return true;
+			}
+			
+			function createJstsPolygon(geometryFactory, polygon) {
+			  var path = polygon.getPath();
+			  var coordinates = path.getArray().map(function name(coord) {
+				return new jsts.geom.Coordinate(coord.lat(), coord.lng());
+			  });
+			  coordinates.push(coordinates[0]);
+			  var shell = geometryFactory.createLinearRing(coordinates);
+			  return geometryFactory.createPolygon(shell);
+			}
+			
+			google.maps.event.addListener(map, "click", function(event) {
+					$('#square').html("X-XX-XX");
+					var lat = event.latLng.lat();
+					var lng = event.latLng.lng();
+					DrawData(lat,lng);
+				});
+				
+			for (var i=0; i<=44; i++)
+			{
+				var flightPlanCoordinates = [
+				  {lat: northLat + i* latSquareSize, lng: westLng},
+				  {lat: northLat + i* latSquareSize, lng: eastLng}
+				];
+				
+				
+				var flightPath = new google.maps.Polyline({
+				  path: flightPlanCoordinates,
+				  geodesic: false,
+				  strokeColor: '#666666',
+				  strokeOpacity: 0.6,
+				  strokeWeight: 1
+				});
+				flightPath.setMap(map);				
+			}
+			for (var i=0; i<=16; i++)
+			{
+				var flightPlanCoordinates = [
+				  {lat: northLat, lng: westLng + i* lngSquareSize},
+				  {lat: southLat, lng: westLng + i* lngSquareSize}
+				];
+				var flightPath = new google.maps.Polyline({
+				  path: flightPlanCoordinates,
+				  geodesic: false,
+				  strokeColor: '#666666',
+				  strokeOpacity: 0.6,
+				  strokeWeight: 1
+				});
+				flightPath.setMap(map);
+			}
+			
+			for (var i=0; i<44; i++)
+			{
+				for (var j=0; j<16; j++)
+				{
+					const position = {lat: northLat + i* latSquareSize + latSquareSize/2, lng: westLng + j* lngSquareSize + lngSquareSize/2};
+					const label = new TextOverlay(position, getSquareByLatLng(position.lat, position.lng), "square-label");
+					label.setMap(map);
+				}
+			}
+			
+			window.areas.forEach(area => {
+				const label = new TextOverlay(area.center, area.name, "area-label", 30);
+				label.setMap(map);
+			});
+			
+			fetch('/data.json')
+			  .then(response => {
+				if (!response.ok) {
+				  throw new Error('Network response was not ok');
+				}
+				return response.json(); // Parse the JSON
+			  })
+			  .then(data => {
+				// Assuming data is an array
+				data.forEach(item => {
+				  console.log(`Square: ${item.square}`);
+				  try{
+					PaintSquareByCode(item.square);
+				  }
+				  catch(e)
+				  {
+					console.log("failed to paint: " + item.square);
+				  }
+				});
+			  })
+			  .catch(error => {
+				console.error('Error loading JSON:', error);
+			  });
+			
+            // var drawingManager = new google.maps.drawing.DrawingManager({
+               // drawingMode: google.maps.drawing.OverlayType.POLYGON,
+               // drawingControl: true,
+               // drawingControlOptions: {
+                   // position: google.maps.ControlPosition.TOP_CENTER,
+                   // drawingModes: [
+                     // google.maps.drawing.OverlayType.POLYGON,
+                   // ]
+               // }
+            // });
+            // drawingManager.setMap(map);
+
+            // google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
+               // var coordinates = (polygon.getPath().getArray());
+               // console.log(coordinates);
+               // for (var i = 0; i < coordinates.length; i++) {
+                   // console.log('lat:' + coordinates[i].lat() + ' lng: ' + coordinates[i].lng());
+               // }
+            // });
+        }
+		var markMyLocation = function (position)
+		{
+			var lat = position.coords.latitude;
+			var lng = position.coords.longitude;
+			var myLatlng = new google.maps.LatLng(lat, lng);
+			if (marker)
+			{
+				marker.setPosition(myLatlng);
+			}
+			else 
+			{
+				marker = new google.maps.Marker({
+				position: myLatlng,
+				map: map,
+				title: 'Good Luck in Holyland Contest!'
+				});
+			}
+		}
+        var setAreas = function (position) {
+			//if map does not exist -> initialize it (it must be on the application first load)
+            if (!map) initMap(position);
+			markMyLocation(position);//put a mark in the current location
+            var square = getAreaByPosition(position);//calculate the square
+            $('#square').html(square);//set the label
+			$btn.button('reset');//reset the button state
+        }
+        var getMySquare = function () {
+            if (navigator.geolocation) {
+				//get the location and do the callback
+                navigator.geolocation.getCurrentPosition(setAreas, function(){
+				$('#square').html("Please turn on your Geolocation data sharing and reload this page.")
+				});
+            } else {
+                $('#square').html("Geolocation is not supported by this browser, Try Chrome.")
+            }
+        }
+		
+		var DrawData = function(lat, lng)
+		{
+			var info = ParsePosition(lat, lng);
+			var node = document.getElementById('locator');
+			node.innerHTML = info;
+		}
+
+		var ParsePosition = function(lat, lng)
+		{
+	// Extract QTH locator and various data from the clicked point
+
+      var longDir;
+      if (lng < 0)
+       longDir = "W"
+      else
+       longDir = "E";
+      var latDir;
+      if (lat < 0)
+       latDir = "S"
+      else
+       latDir = "N";
+
+      var longDeg;
+      var longMin;
+      if (lng > 0)
+      {
+       longDeg = Math.floor(lng);
+       longMin = (lng - longDeg) * 100;
+      }
+      else
+      {
+       longDeg = Math.ceil(lng);
+       longMin = (longDeg - lng) * 100;
+      }
+      var longMin2 = longMin * 60 / 100;
+      var longSec = Math.round((longMin2 - Math.floor(longMin2)) * 60);
+
+      var latDeg;
+      var latMin;
+      if (lat > 0)
+      {
+       latDeg = Math.floor(lat);
+       latMin = (lat - latDeg) * 100;
+      }
+      else
+      {
+       latDeg = Math.ceil(lat);
+       latMin = (latDeg - lat) * 100;
+      }
+
+      var latMin2 = latMin * 60 / 100;
+      var latSec = Math.round((latMin2 - Math.floor(latMin2)) * 60);
+      //var strHtml = "<font face='arial' size='3'>";
+      
+      //strHtml += "Longitude : " + Math.round(lng * 100000) / 100000 + " " + longDir;
+      //strHtml += " (" + longDeg + "&deg; " + Math.floor(longMin2) + "' " + longSec + "'' "+ longDir + ")";
+      //strHtml += "<br />\n";
+      //strHtml += "Latitude : " + Math.round(lat * 100000) / 100000 + " " + latDir;
+      //strHtml += " (" + latDeg + "&deg; " + Math.floor(latMin2) + "' " + latSec + "'' "+ latDir + ")";
+      //strHtml += "<br />\n";
+
+      /* Long/Lat to QTH locator conversion largely       */
+      /* inspired from the DL4MFM code found here :       */
+      /* http://members.aol.com/mfietz/ham/calcloce.html */
+
+      var ychr = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      var ynum = "0123456789";
+      var yqth, yi, yk, ydiv, yres, ylp, y;
+      var y = 0;
+      var ycalc = new Array(0,0,0);
+      var yn = new Array(0,0,0,0,0,0,0);
+
+      ycalc[1] = lng + 180;
+      ycalc[2] = lat +  90;
+
+      for (yi = 1; yi < 3; ++yi) {
+        for (yk = 1; yk < 4; ++yk) {
+            if (yk != 3) {
+            if (yi == 1) {
+              if (yk == 1) ydiv = 20;
+              if (yk == 2) ydiv = 2;
+            }
+            if (yi == 2) {
+              if (yk == 1) ydiv = 10;
+              if (yk == 2) ydiv = 1;
+            }
+
+            yres = ycalc[yi] / ydiv;
+            ycalc[yi] = yres;
+            if (ycalc[yi]>0)
+              ylp = Math.floor(yres)
+            else
+              ylp = Math.ceil(yres);
+            ycalc[yi] = (ycalc[yi] - ylp) * ydiv;
+            }
+            else {
+            if (yi == 1)
+              ydiv = 12
+            else
+              ydiv = 24;
+
+            yres = ycalc[yi] * ydiv;
+            ycalc[yi] = yres;
+            if (ycalc[yi] > 0)
+              ylp = Math.floor(yres)
+            else
+              ylp = Math.ceil(yres);
+            }
+
+        ++y;
+        yn[y] = ylp;
+        }
+      }
+
+      yqth = ychr.charAt(yn[1]) + ychr.charAt(yn[4]) + ynum.charAt(yn[2]);
+      yqth += ynum.charAt(yn[5]) + ychr.charAt(yn[3])+ ychr.charAt(yn[6]);
+
+	  strCookieBtn = "";
+      //strCookieBtn += "<center><input type='button' value='Define as start point for distance and azimuth' onClick='setCookie(\"home\", ";
+      //strCookieBtn += "\"" + event.latLng.lng() + "/" + event.latLng.lat() + "/" + yqth + "\", 365 * 10);'></center>";
+	
+      strHtml = yqth;
+      //strHtml += "<br />\n";
+      //strHtml += "<br />\n";
+      //strHtml += strCookieBtn;
+      //strHtml += "</font>";
+	  return strHtml;
+	}
+    </script>
+
+	
+
+</body>
+
+<!-- Mirrored from 67.222.56.236/holysquare/ by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 04 Nov 2018 15:18:41 GMT -->
+</html>

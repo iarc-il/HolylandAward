@@ -1,0 +1,26 @@
+Missing Holy Squares (Exist in the list but not on the map)
+H06AK
+J07AK
+B21AS
+Z22AZ
+Z23AZ
+K21BL
+M11JN
+G16JS
+H16JS
+N04KT
+M11YZ
+N11YZ
+
+Extra Holy Squares (Exist on the map but not in the list):
+H06HD
+G11HD
+C20BS
+L20HB
+F22AS
+J14SM
+G14RA
+N10YN
+J08HD
+M07YZ
+L06AK
