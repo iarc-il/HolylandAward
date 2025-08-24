@@ -1,4 +1,12 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Float,
+    UniqueConstraint,
+)
 from sqlalchemy.sql import func
 from database import Base
 
@@ -12,6 +20,8 @@ class QSOLogs(Base):
     spotter = Column(String, index=True)  # Spotter callsign
     dx = Column(String, index=True)  # DX callsign
     area = Column(String, index=True)  # Area or grid square
+    marked_for_sticker = Column(Boolean, default=False)
+    marked_for_certificate = Column(Boolean, default=False)
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
