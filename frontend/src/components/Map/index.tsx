@@ -6,56 +6,58 @@ import { areas, qsoData } from "@/data/areas";
 import { getSquareByLatLng, parseQSOCode } from "@/utils/mapUtils";
 import { Area } from "@/types/map";
 
-// Custom TextOverlay class for Google Maps
-class TextOverlay extends (window as any).google.maps.OverlayView {
-  private position: any; // google.maps.LatLng when maps is loaded
-  private text: string;
-  private div: HTMLDivElement | null = null;
+// TextOverlay class factory - creates the class after Google Maps is loaded
+const createTextOverlayClass = () => {
+  return class TextOverlay extends (window as any).google.maps.OverlayView {
+    private position: any; // google.maps.LatLng when maps is loaded
+    private text: string;
+    private div: HTMLDivElement | null = null;
 
-  constructor(position: any, text: string) {
-    super();
-    this.position = position;
-    this.text = text;
-  }
-
-  onAdd() {
-    this.div = document.createElement("div");
-    this.div.style.position = "absolute";
-    this.div.style.fontSize = "12px";
-    this.div.style.fontWeight = "bold";
-    this.div.style.color = "red";
-    this.div.style.backgroundColor = "white";
-    this.div.style.border = "1px solid black";
-    this.div.style.padding = "2px";
-    this.div.style.borderRadius = "3px";
-    this.div.innerHTML = this.text;
-
-    const panes = this.getPanes();
-    if (panes) {
-      panes.overlayLayer.appendChild(this.div);
+    constructor(position: any, text: string) {
+      super();
+      this.position = position;
+      this.text = text;
     }
-  }
 
-  draw() {
-    if (!this.div) return;
+    onAdd() {
+      this.div = document.createElement("div");
+      this.div.style.position = "absolute";
+      this.div.style.fontSize = "12px";
+      this.div.style.fontWeight = "bold";
+      this.div.style.color = "red";
+      this.div.style.backgroundColor = "white";
+      this.div.style.border = "1px solid black";
+      this.div.style.padding = "2px";
+      this.div.style.borderRadius = "3px";
+      this.div.innerHTML = this.text;
 
-    const overlayProjection = this.getProjection();
-    if (!overlayProjection) return;
-
-    const position = overlayProjection.fromLatLngToDivPixel(this.position);
-    if (position) {
-      this.div.style.left = position.x + "px";
-      this.div.style.top = position.y + "px";
+      const panes = this.getPanes();
+      if (panes) {
+        panes.overlayLayer.appendChild(this.div);
+      }
     }
-  }
 
-  onRemove() {
-    if (this.div && this.div.parentNode) {
-      this.div.parentNode.removeChild(this.div);
-      this.div = null;
+    draw() {
+      if (!this.div) return;
+
+      const overlayProjection = this.getProjection();
+      if (!overlayProjection) return;
+
+      const position = overlayProjection.fromLatLngToDivPixel(this.position);
+      if (position) {
+        this.div.style.left = position.x + "px";
+        this.div.style.top = position.y + "px";
+      }
     }
-  }
-}
+
+    onRemove() {
+      if (this.div && this.div.parentNode) {
+        this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+  };
+};
 
 const Map: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -63,8 +65,9 @@ const Map: React.FC = () => {
   const [searchValue, setSearchValue] = useState("");
   const [polygons, setPolygons] = useState<any[]>([]); // google.maps.Polygon[] when loaded
   const [markers, setMarkers] = useState<any[]>([]); // google.maps.Marker[] when loaded
-  const [overlays, setOverlays] = useState<TextOverlay[]>([]);
+  const [overlays, setOverlays] = useState<any[]>([]); // TextOverlay[] when loaded
   const [gridOverlays, setGridOverlays] = useState<any[]>([]); // google.maps.Polygon[] when loaded
+  const [TextOverlay, setTextOverlay] = useState<any>(null); // TextOverlay class when loaded
 
   useEffect(() => {
     const initMap = async () => {
@@ -76,6 +79,10 @@ const Map: React.FC = () => {
 
       try {
         await loader.load();
+
+        // Create TextOverlay class after Google Maps is loaded
+        const TextOverlayClass = createTextOverlayClass();
+        setTextOverlay(() => TextOverlayClass);
 
         if (mapRef.current) {
           const mapInstance = new (window as any).google.maps.Map(
@@ -116,7 +123,7 @@ const Map: React.FC = () => {
   };
 
   const showAreas = () => {
-    if (!map) return;
+    if (!map || !TextOverlay) return;
 
     clearMap();
     const newPolygons: unknown[] = []; // google.maps.Polygon[] when loaded
@@ -150,7 +157,7 @@ const Map: React.FC = () => {
   };
 
   const showMissingSquares = () => {
-    if (!map) return;
+    if (!map || !TextOverlay) return;
 
     clearMap();
     const newGridOverlays: unknown[] = []; // google.maps.Polygon[] when loaded
