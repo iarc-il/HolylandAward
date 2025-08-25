@@ -1,6 +1,9 @@
 class AwardChecker:
-    def __init__(self, certificate_ammount, sticker_amount):
-        self.certificate_ammount = certificate_ammount
+    def __init__(
+        self, certificate_areas_amount, certificate_district_ammount, sticker_amount
+    ):
+        self.certificate_areas_amount = certificate_areas_amount
+        self.certificate_district_ammount = certificate_district_ammount
         self.sticker_amount = sticker_amount
 
     def check_certificate(self):
