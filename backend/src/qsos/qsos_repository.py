@@ -11,29 +11,24 @@ class QSORepository:
 
     def insert_qsos(self, qsos: list[QSO]) -> list[QSOResponse]:
         """
-        Insert multiple QSO entries. If spotter+area combination exists,
-        do nothing (keep existing record unchanged).
+        Insert multiple QSO entries in a single batch operation.
+        If spotter+area combination exists, do nothing.
+        Returns only the newly inserted records.
         """
-        results = []
+        if not qsos:
+            return []
 
-        for qso in qsos:
-            stmt = insert(QSOLogs).values(**qso.model_dump())
-            stmt = stmt.on_conflict_do_nothing(constraint="unique_spotter_area")
-            self.db.execute(stmt)
+        # Single batch insert with conflict handling
+        stmt = insert(QSOLogs).values([qso.model_dump() for qso in qsos])
+        stmt = stmt.on_conflict_do_nothing(constraint="unique_spotter_area")
+        returning_stmt = stmt.returning(QSOLogs)  # Return only newly inserted records
 
+        result = self.db.execute(returning_stmt)
         self.db.commit()
 
-        # Get all the records (either newly inserted or existing ones)
-        for qso in qsos:
-            qso_record = (
-                self.db.query(QSOLogs)
-                .filter(QSOLogs.spotter == qso.spotter, QSOLogs.area == qso.area)
-                .first()
-            )
-            if qso_record:
-                results.append(QSOResponse.model_validate(qso_record))
-
-        return results
+        # Convert to response objects
+        newly_inserted = result.fetchall()
+        return [QSOResponse.model_validate(qso[0]) for qso in newly_inserted]
 
     def get_all_qsos(self) -> list[QSOResponse]:
         """Get all QSO entries."""
