@@ -43,71 +43,73 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: oklch(0.97 0.02 240); /* More blue-tinted background */
+  --foreground: oklch(0.2 0.15 240); /* Deeper blue text */
+  --card: oklch(0.98 0.02 240); /* Slightly blue cards */
+  --card-foreground: oklch(0.2 0.15 240);
+  --popover: oklch(0.98 0.02 240);
+  --popover-foreground: oklch(0.2 0.15 240);
+  --primary: oklch(0.45 0.35 240); /* Much more saturated blue primary */
+  --primary-foreground: oklch(0.98 0 0); /* White text on blue */
+  --secondary: oklch(0.88 0.06 240); /* More blue secondary */
+  --secondary-foreground: oklch(0.25 0.15 240);
+  --muted: oklch(0.92 0.04 240); /* More blue muted */
+  --muted-foreground: oklch(0.4 0.12 240);
+  --accent: oklch(0.8 0.1 240); /* Stronger blue accent */
+  --accent-foreground: oklch(0.2 0.15 240);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --border: oklch(0.82 0.08 240); /* More blue borders */
+  --input: oklch(0.94 0.04 240); /* More blue inputs */
+  --ring: oklch(0.45 0.35 240); /* Strong blue focus rings */
+  --chart-1: oklch(0.55 0.25 240); /* More saturated chart colors */
+  --chart-2: oklch(0.65 0.2 220);
+  --chart-3: oklch(0.35 0.3 260);
+  --chart-4: oklch(0.75 0.15 200);
+  --chart-5: oklch(0.5 0.28 250);
+  --sidebar: oklch(0.93 0.06 240); /* More blue sidebar */
+  --sidebar-foreground: oklch(0.2 0.15 240);
+  --sidebar-primary: oklch(
+    0.4 0.35 240
+  ); /* Highly saturated blue for active items */
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.85 0.08 240);
+  --sidebar-accent-foreground: oklch(0.25 0.15 240);
+  --sidebar-border: oklch(0.82 0.08 240);
+  --sidebar-ring: oklch(0.45 0.35 240);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.12 0.15 240); /* Much more blue dark background */
+  --foreground: oklch(0.94 0.06 240); /* More blue-tinted light text */
+  --card: oklch(0.18 0.12 240); /* More saturated dark blue cards */
+  --card-foreground: oklch(0.94 0.06 240);
+  --popover: oklch(0.18 0.12 240);
+  --popover-foreground: oklch(0.94 0.06 240);
+  --primary: oklch(0.65 0.25 240); /* Brighter, more saturated blue primary */
+  --primary-foreground: oklch(0.1 0.1 240);
+  --secondary: oklch(0.22 0.15 240); /* More saturated dark blue */
+  --secondary-foreground: oklch(0.88 0.08 240);
+  --muted: oklch(0.24 0.12 240);
+  --muted-foreground: oklch(0.65 0.1 240);
+  --accent: oklch(0.32 0.18 240); /* Much stronger blue accent */
+  --accent-foreground: oklch(0.94 0.06 240);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: oklch(0.28 0.15 240); /* More blue borders */
+  --input: oklch(0.2 0.12 240); /* More blue inputs */
+  --ring: oklch(0.65 0.25 240); /* Bright blue focus */
+  --chart-1: oklch(0.55 0.3 240); /* Highly saturated chart colors for dark */
+  --chart-2: oklch(0.6 0.25 220);
+  --chart-3: oklch(0.45 0.35 260);
+  --chart-4: oklch(0.7 0.2 200);
+  --chart-5: oklch(0.5 0.3 250);
+  --sidebar: oklch(0.16 0.12 240); /* More blue sidebar */
+  --sidebar-foreground: oklch(0.88 0.08 240);
+  --sidebar-primary: oklch(0.55 0.3 240); /* Highly saturated blue for active */
+  --sidebar-primary-foreground: oklch(0.1 0.1 240);
+  --sidebar-accent: oklch(0.26 0.15 240);
+  --sidebar-accent-foreground: oklch(0.88 0.08 240);
+  --sidebar-border: oklch(0.28 0.15 240);
+  --sidebar-ring: oklch(0.65 0.25 240);
 }
 
 @layer base {
