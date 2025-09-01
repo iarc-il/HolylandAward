@@ -69,6 +69,7 @@ const Map: React.FC = () => {
   const [gridOverlays, setGridOverlays] = useState<any[]>([]); // google.maps.Polygon[] when loaded
   const [gridLines, setGridLines] = useState<any[]>([]); // google.maps.Polyline[] when loaded
   const [TextOverlay, setTextOverlay] = useState<any>(null); // TextOverlay class when loaded
+  const mapInitialized = useRef(false); // Add a ref to track initialization
 
   // Grid constants from original HTML
   const northLat = 33.383;
@@ -102,6 +103,7 @@ const Map: React.FC = () => {
     return square;
   };
 
+  // 1. Initial Map and API Loader
   useEffect(() => {
     const initMap = async () => {
       const loader = new Loader({
@@ -112,8 +114,6 @@ const Map: React.FC = () => {
 
       try {
         await loader.load();
-
-        // Create TextOverlay class after Google Maps is loaded
         const TextOverlayClass = createTextOverlayClass();
         setTextOverlay(() => TextOverlayClass);
 
@@ -126,7 +126,6 @@ const Map: React.FC = () => {
               mapTypeId: (window as any).google.maps.MapTypeId.ROADMAP,
             }
           );
-
           setMap(mapInstance);
         }
       } catch (error) {
@@ -136,6 +135,15 @@ const Map: React.FC = () => {
 
     initMap();
   }, []);
+
+  // 2. Separate useEffect to run showGrid only once
+  useEffect(() => {
+    // Check if the map and TextOverlay are ready AND if the grid hasn't been shown yet
+    if (map && TextOverlay && !mapInitialized.current) {
+      showGrid();
+      mapInitialized.current = true; // Set the flag to true after the first call
+    }
+  }, [map, TextOverlay]);
 
   const clearMap = () => {
     // Clear polygons
@@ -397,105 +405,10 @@ const Map: React.FC = () => {
     setGridOverlays(newGridOverlays);
   };
 
-  const searchLocation = () => {
-    if (!map || !searchValue.trim()) return;
-
-    const geocoder = new (window as any).google.maps.Geocoder();
-
-    // Try to parse as coordinates first (lat, lng format)
-    const coordPattern = /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/;
-    const coordMatch = searchValue.trim().match(coordPattern);
-
-    if (coordMatch) {
-      const lat = parseFloat(coordMatch[1]);
-      const lng = parseFloat(coordMatch[2]);
-      const position = new (window as any).google.maps.LatLng(lat, lng);
-      map.setCenter(position);
-      map.setZoom(15);
-
-      // Add marker
-      const marker = new (window as any).google.maps.Marker({
-        position: position,
-        map: map,
-        title: `${lat}, ${lng}`,
-      });
-
-      setMarkers((prev) => [...prev, marker]);
-      return;
-    }
-
-    // Try to parse as QSO code
-    const qsoCoords = parseQSOCode(searchValue.trim());
-    if (qsoCoords) {
-      // For now, just show a message since we need to implement the conversion
-      alert(`QSO Code parsed: ${JSON.stringify(qsoCoords)}`);
-      return;
-    }
-
-    // Fallback to geocoding
-    geocoder.geocode(
-      { address: searchValue },
-      (results: unknown, status: string) => {
-        if (status === "OK" && Array.isArray(results) && results[0]) {
-          const result = results[0] as any;
-          map.setCenter(result.geometry.location);
-          map.setZoom(15);
-
-          // Add marker
-          const marker = new (window as any).google.maps.Marker({
-            position: result.geometry.location,
-            map: map,
-            title: searchValue,
-          });
-
-          setMarkers((prev) => [...prev, marker]);
-        } else {
-          alert("Location not found: " + status);
-        }
-      }
-    );
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      searchLocation();
-    }
-  };
-
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
         <h1 className="text-3xl font-bold mb-4">Holyland Contest Map</h1>
-
-        <div className="flex gap-2 mb-4">
-          <Input
-            type="text"
-            placeholder="Search location, coordinates, or QSO locator..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="flex-1"
-          />
-          <Button onClick={searchLocation}>Search</Button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={showGrid} variant="outline">
-            Show Grid
-          </Button>
-          <Button onClick={showAreas} variant="outline">
-            Show Areas
-          </Button>
-          <Button onClick={showWorkedSquares} variant="outline">
-            Show Worked Squares
-          </Button>
-          <Button onClick={showMissingSquares} variant="outline">
-            Show Missing Squares
-          </Button>
-          <Button onClick={clearMap} variant="outline">
-            Clear Map
-          </Button>
-        </div>
       </div>
 
       <div className="flex-1">
