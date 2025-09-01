@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { areas, qsoData } from "@/data/areas";
-import { parseQSOCode } from "@/utils/mapUtils";
-import { Area } from "@/types/map";
 
+import { areas, qsoData } from "@/data/areas";
+import { Area } from "@/types/map";
+import useAreas from "./hooks/useAreas";
 // TextOverlay class factory - creates the class after Google Maps is loaded
 const createTextOverlayClass = () => {
   return class TextOverlay extends (window as any).google.maps.OverlayView {
@@ -70,6 +68,9 @@ const Map: React.FC = () => {
   const [gridLines, setGridLines] = useState<any[]>([]); // google.maps.Polyline[] when loaded
   const [TextOverlay, setTextOverlay] = useState<any>(null); // TextOverlay class when loaded
   const mapInitialized = useRef(false); // Add a ref to track initialization
+
+  const { data: _areas } = useAreas("4Z1KD");
+  console.log("areas", _areas);
 
   // Grid constants from original HTML
   const northLat = 33.383;
