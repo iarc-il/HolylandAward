@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import UploadPage from "./components/UploadPage";
 import Map from "./components/Map";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { SignedIn, SignedOut, SignIn } from "@clerk/clerk-react";
+
 // Page components
 const Dashboard = () => (
   <div className="flex flex-col space-y-4">
@@ -63,19 +65,26 @@ function App() {
       <BrowserRouter>
         <SidebarProvider>
           <div className="flex h-screen w-full">
-            <AppSidebar />
-            <main className="flex-1 h-screen">
-              <div className="flex flex-1 flex-col gap-4 p-4 pt-0 h-screen">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/upload" element={<UploadPage />} />
-                  <Route path="/map" element={<Map />} />
-                  <Route path="/logs" element={<LogsPage />} />
-                  <Route path="/awards" element={<AwardsPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                </Routes>
-              </div>
-            </main>
+            <SignedOut>
+              <main className="flex-1 h-screen flex items-center justify-center">
+                <SignIn />
+              </main>
+            </SignedOut>
+            <SignedIn>
+              <AppSidebar />
+              <main className="flex-1 h-screen">
+                <div className="flex flex-1 flex-col gap-4 p-4 pt-0 h-screen">
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/upload" element={<UploadPage />} />
+                    <Route path="/map" element={<Map />} />
+                    <Route path="/logs" element={<LogsPage />} />
+                    <Route path="/awards" element={<AwardsPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                  </Routes>
+                </div>
+              </main>
+            </SignedIn>
           </div>
         </SidebarProvider>
       </BrowserRouter>

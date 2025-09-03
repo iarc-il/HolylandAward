@@ -10,7 +10,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Home, Upload, Map, FileText, Settings, Trophy } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Home,
+  Upload,
+  Map,
+  FileText,
+  Settings,
+  Trophy,
+  LogOut,
+} from "lucide-react";
+import { SignOutButton } from "@clerk/clerk-react";
 
 // Menu items for the sidebar
 const items = [
@@ -76,6 +86,15 @@ const AppSidebar = () => {
       <SidebarFooter>
         <div className="px-4 py-2 text-sm text-muted-foreground">
           Amateur Radio Contest Management
+        </div>
+        <div className="px-4 py-2">
+          <SignOutButton>
+            {/* <Button variant="outline">Sign Out</Button> */}
+            <SidebarMenuButton>
+              <LogOut />
+              <span>Sign Out</span>
+            </SidebarMenuButton>
+          </SignOutButton>
         </div>
       </SidebarFooter>
     </Sidebar>
