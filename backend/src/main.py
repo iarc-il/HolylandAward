@@ -1,7 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, Depends
 import uvicorn
 import adif_io
 import os
+
+
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from adif_service import AdifService
 from database import get_db
@@ -9,7 +12,8 @@ from qsos.qsos_repository import QSORepository
 from qsos.schema import QSO
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-
+from clerk_backend_api import Clerk
+from clerk_backend_api.security.types import AuthenticateRequestOptions
 
 origins = ["http://localhost:5173"]
 
@@ -37,6 +41,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+clerk = Clerk(bearer_auth="ADDKEY")
+bearer_scheme = HTTPBearer()
+
+
+# Define the authentication dependency
+async def verify_clerk_session(request: Request):
+    """
+    Verifies the user's session using Clerk's SDK and returns the user ID.
+    Raises an HTTPException if the user is not authenticated.
+    """
+    try:
+        # Pass the raw FastAPI request object to Clerk's authentication method.
+        # This handles parsing the Authorization header and verifying the JWT.
+        session = clerk.authenticate_request(
+            request,
+            AuthenticateRequestOptions(authorized_parties=["http://localhost:5173"]),
+        )
+
+        # The session object contains all the user and session data
+        if not session.is_signed_in:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated."
+            )
+
+        # Return the user_id, which can be injected into the route handler
+        return session.payload["sub"]
+
+    except Exception as e:
+        # Catch any exceptions during authentication and return a 401 error
+        print(f"Authentication failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials.",
+        )
+
 
 # Dependency function to get repository
 def get_qso_repository(db: Session = Depends(get_db)) -> QSORepository:
@@ -51,8 +90,11 @@ def read_root():
 # get all areas of a spotter
 @app.get("/areas/{spotter_callsign}")
 def get_all_areas(
-    spotter_callsign: str, repo: QSORepository = Depends(get_qso_repository)
+    spotter_callsign: str,
+    repo: QSORepository = Depends(get_qso_repository),
+    user_id: str = Depends(verify_clerk_session),
 ):
+    print(f"user_id: {user_id}")
     areas = repo.get_areas_by_spotter(spotter_callsign)
     return {"areas": areas}
 
