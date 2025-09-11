@@ -14,21 +14,9 @@ from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from clerk_backend_api import Clerk
 from clerk_backend_api.security.types import AuthenticateRequestOptions
+from lifespan import lifespan
 
 origins = ["http://localhost:5173"]
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
-    # Startup
-    print("Application starting up...")
-    print("Note: Run 'uv run alembic upgrade head' to apply migrations")
-
-    yield
-
-    # Shutdown (if needed)
-    print("Application shutting down...")
 
 
 app = FastAPI(lifespan=lifespan)
