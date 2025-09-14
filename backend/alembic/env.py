@@ -12,7 +12,11 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from database import Base
-from qsos.models import QSOLogs  # Import all your models here
+
+# Import all models to ensure they're included in migrations
+from qsos.models import QSOLogs
+from users.models import Users
+from awards.models import Award
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
