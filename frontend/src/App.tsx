@@ -1,36 +1,16 @@
 // import { Button } from "@/components/ui/button"
+import React from "react";
+
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "./components/AppSidebar";
-import React from "react";
+import Dashboard from "./components/Dashboard";
 import { BrowserRouter, Routes, Route } from "react-router";
 import UploadPage from "./components/UploadPage";
 import Map from "./components/Map";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { SignedIn, SignedOut, SignIn } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, SignUp } from "@clerk/clerk-react";
 
 // Page components
-const Dashboard = () => (
-  <div className="flex flex-col space-y-4">
-    <h1 className="text-3xl font-bold">Dashboard</h1>
-    <p className="text-muted-foreground">
-      Welcome to the HolyLand Award management system.
-    </p>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="p-6 border rounded-lg">
-        <h3 className="font-semibold">Total QSOs</h3>
-        <p className="text-2xl font-bold">0</p>
-      </div>
-      <div className="p-6 border rounded-lg">
-        <h3 className="font-semibold">Areas Worked</h3>
-        <p className="text-2xl font-bold">0</p>
-      </div>
-      <div className="p-6 border rounded-lg">
-        <h3 className="font-semibold">Awards Earned</h3>
-        <p className="text-2xl font-bold">0</p>
-      </div>
-    </div>
-  </div>
-);
 
 const LogsPage = () => (
   <div className="flex flex-col space-y-4">
@@ -59,7 +39,7 @@ const SettingsPage = () => (
 
 const queryClient = new QueryClient();
 
-function App() {
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -67,7 +47,10 @@ function App() {
           <div className="flex h-screen w-full">
             <SignedOut>
               <main className="flex-1 h-screen flex items-center justify-center">
-                <SignIn />
+                <SignUp
+                  afterSignInUrl="/?setup=true"
+                  afterSignUpUrl="/?setup=true"
+                />
               </main>
             </SignedOut>
             <SignedIn>
@@ -90,6 +73,6 @@ function App() {
       </BrowserRouter>
     </QueryClientProvider>
   );
-}
+};
 
 export default App;
