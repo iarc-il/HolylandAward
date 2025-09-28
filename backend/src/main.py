@@ -12,10 +12,12 @@ from database import get_db
 from qsos.qsos_repository import QSORepository
 from qsos.schema import QSO
 from users import service as user_service
+from users.repository import get_user_by_clerk_id
+from users.schema import UserProfileUpdateRequest, UserResponse
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-from clerk_backend_api import Clerk
-from clerk_backend_api.security.types import AuthenticateRequestOptions
+from utils import verify_clerk_session
+
 from lifespan import lifespan
 
 origins = ["http://localhost:5173"]
@@ -31,40 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-clerk = Clerk(bearer_auth="ADDKEY")
 bearer_scheme = HTTPBearer()
-
-
-# Define the authentication dependency
-async def verify_clerk_session(request: Request):
-    """
-    Verifies the user's session using Clerk's SDK and returns the user ID.
-    Raises an HTTPException if the user is not authenticated.
-    """
-    try:
-        # Pass the raw FastAPI request object to Clerk's authentication method.
-        # This handles parsing the Authorization header and verifying the JWT.
-        session = clerk.authenticate_request(
-            request,
-            AuthenticateRequestOptions(authorized_parties=["http://localhost:5173"]),
-        )
-
-        # The session object contains all the user and session data
-        if not session.is_signed_in:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated."
-            )
-
-        # Return the user_id, which can be injected into the route handler
-        return session.payload["sub"]
-
-    except Exception as e:
-        # Catch any exceptions during authentication and return a 401 error
-        print(f"Authentication failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials.",
-        )
 
 
 # Dependency function to get repository
@@ -103,6 +72,63 @@ async def handle_clerk_webhook(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Webhook error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/users/profile", response_model=UserResponse)
+async def get_user_profile(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    """Get current user's profile"""
+    try:
+        user = get_user_by_clerk_id(db, user_id)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+
+        return UserResponse.from_orm(user)
+
+    except Exception as e:
+        print(f"Get profile error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
+
+
+@app.put("/users/profile", response_model=UserResponse)
+async def update_user_profile(
+    profile_data: UserProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    """Update user's callsign and region"""
+    try:
+        # Update user profile using the service function
+        updated_user = user_service.update_user_profile(
+            db=db,
+            clerk_user_id=user_id,
+            callsign=profile_data.callsign,
+            region=profile_data.region,
+        )
+
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+
+        return UserResponse.from_orm(updated_user)
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        print(f"Profile update error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
 
 
 @app.get("/")

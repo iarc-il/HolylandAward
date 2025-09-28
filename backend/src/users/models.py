@@ -21,6 +21,7 @@ class Users(Base):
     callsign = Column(
         String, unique=True, index=True, nullable=True
     )  # Ham radio callsign
+    region = Column(Integer, nullable=True)  # Amateur radio region (1, 2, or 3)
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

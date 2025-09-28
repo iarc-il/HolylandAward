@@ -39,3 +39,16 @@ def update_user_callsign(
         db.commit()
         db.refresh(user)
     return user
+
+
+def update_user_profile(
+    db: Session, clerk_user_id: str, callsign: str, region: int
+) -> Optional[Users]:
+    """Update user's callsign and region"""
+    user = get_user_by_clerk_id(db, clerk_user_id)
+    if user:
+        user.callsign = callsign
+        user.region = region
+        db.commit()
+        db.refresh(user)
+    return user
