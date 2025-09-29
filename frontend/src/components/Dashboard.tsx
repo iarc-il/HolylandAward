@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
+import { toast } from "sonner";
 import UserDetailsDialog from "./UserDetailsDialog";
 
 const Dashboard = () => {
@@ -22,23 +23,11 @@ const Dashboard = () => {
     setSearchParams(newParams);
   };
 
-  const handleUserDetailsSubmit = async (data: {
-    callsign: string;
-    region: string;
-  }) => {
-    try {
-      // TODO: Submit user details to backend
-      console.log("Submitting user details:", data);
-
-      // For now, just close the dialog
-      handleDialogClose();
-
-      // TODO: Add API call to update user profile
-      // await updateUserProfile(data);
-    } catch (error) {
-      console.error("Error updating user profile:", error);
-      // TODO: Show error message to user
-    }
+  const handleUserDetailsSuccess = () => {
+    toast.success("Profile updated successfully!", {
+      description: "Your callsign and region have been saved.",
+      duration: 4000,
+    });
   };
 
   return (
@@ -67,7 +56,7 @@ const Dashboard = () => {
       <UserDetailsDialog
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
-        onSubmit={handleUserDetailsSubmit}
+        onSuccess={handleUserDetailsSuccess}
       />
     </div>
   );

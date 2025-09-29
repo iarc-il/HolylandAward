@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
+import { apiClient } from '@/lib/api'
 
 type QSO = {
   date: string
@@ -14,25 +15,18 @@ type UploadResponse = {
 }
 
 
-const postAdif = async (file: File, spotterCallsign = '4Z1KD'): Promise<UploadResponse> => {
+const postAdif = async (file: File, spotterCallsign = '4Z5SL'): Promise<UploadResponse> => {
   const formData = new FormData()
   formData.append('file', file) // field name must be "file" to match UploadFile=File(...)
 
-  const res = await fetch(`http://localhost:1293/read-file?spotter_callsign=${encodeURIComponent(spotterCallsign)}`, {
-    method: 'POST',
-    body: formData,
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || `Upload failed (${res.status})`)
-  }
+  const res = await apiClient.upload(`/read-file?spotter_callsign=${encodeURIComponent(spotterCallsign)}`, formData)
   return res.json()
 }
 
 const useAdifUpload = () => {
   return useMutation({
-    mutationFn: ({ file, spotter }: { file: File; spotter?: string }) =>
-      postAdif(file, spotter),
+    mutationFn: ({ file }: { file: File }) =>
+      postAdif(file, "4Z5SL"),
   })
 }
 

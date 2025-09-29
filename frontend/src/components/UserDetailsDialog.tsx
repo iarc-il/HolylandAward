@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useUpdateProfile } from "@/api/useUpdateProfile";
 
 // Zod validation schema
 const userDetailsSchema = z
@@ -40,29 +41,39 @@ type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
 interface UserDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { callsign: string; region: string }) => void;
+  onSuccess?: () => void;
 }
 
 const UserDetailsDialog = ({
   isOpen,
   onClose,
-  onSubmit,
+  onSuccess,
 }: UserDetailsDialogProps) => {
   const {
     register,
     handleSubmit,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<UserDetailsFormData>({
     resolver: zodResolver(userDetailsSchema),
   });
 
-  const onFormSubmit = (data: UserDetailsFormData) => {
-    const submitData = {
-      callsign: data.callsign,
-      region: data.region,
-    };
-    onSubmit(submitData);
+  const updateProfileMutation = useUpdateProfile();
+
+  const onFormSubmit = async (data: UserDetailsFormData) => {
+    try {
+      await updateProfileMutation.mutateAsync({
+        callsign: data.callsign,
+        region: data.region,
+      });
+
+      // Success! Close dialog and call success callback
+      onClose();
+      onSuccess?.();
+    } catch (error) {
+      // Error is already handled by the mutation's onError
+      console.error("Form submission error:", error);
+    }
   };
 
   return (
@@ -143,8 +154,8 @@ const UserDetailsDialog = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Profile"}
+            <Button type="submit" disabled={updateProfileMutation.isPending}>
+              {updateProfileMutation.isPending ? "Saving..." : "Save Profile"}
             </Button>
           </DialogFooter>
         </form>

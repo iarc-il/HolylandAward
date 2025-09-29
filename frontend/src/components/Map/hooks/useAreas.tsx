@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
+import { apiClient } from "@/lib/api";
 
 const useAreas = (callSign: string) => {
   const { getToken } = useAuth();
@@ -8,10 +9,8 @@ const useAreas = (callSign: string) => {
     queryKey: ["areas"],
     queryFn: async (): Promise<{ areas: string[] }> => {
       const token = await getToken();
-      const response = await fetch(`http://localhost:1293/areas/${callSign}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await apiClient.get(`/areas/${callSign}`, {
+        Authorization: `Bearer ${token}`,
       });
       return response.json();
     },

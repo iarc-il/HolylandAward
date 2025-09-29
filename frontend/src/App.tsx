@@ -9,6 +9,7 @@ import UploadPage from "./components/UploadPage";
 import Map from "./components/Map";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { SignedIn, SignedOut, SignUp } from "@clerk/clerk-react";
+import { Toaster } from "@/components/ui/sonner";
 
 // Page components
 
@@ -70,6 +71,7 @@ const App = () => {
             </SignedIn>
           </div>
         </SidebarProvider>
+        <Toaster />
       </BrowserRouter>
     </QueryClientProvider>
   );

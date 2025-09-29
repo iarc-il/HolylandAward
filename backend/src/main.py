@@ -14,6 +14,7 @@ from qsos.schema import QSO
 from users import service as user_service
 from users.repository import get_user_by_clerk_id
 from users.schema import UserProfileUpdateRequest, UserResponse
+from users.router import router as users_router
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from utils import verify_clerk_session
@@ -32,6 +33,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(users_router)
 
 bearer_scheme = HTTPBearer()
 
@@ -72,63 +76,6 @@ async def handle_clerk_webhook(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Webhook error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.get("/users/profile", response_model=UserResponse)
-async def get_user_profile(
-    db: Session = Depends(get_db),
-    user_id: str = Depends(verify_clerk_session),
-):
-    """Get current user's profile"""
-    try:
-        user = get_user_by_clerk_id(db, user_id)
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
-
-        return UserResponse.from_orm(user)
-
-    except Exception as e:
-        print(f"Get profile error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
-
-
-@app.put("/users/profile", response_model=UserResponse)
-async def update_user_profile(
-    profile_data: UserProfileUpdateRequest,
-    db: Session = Depends(get_db),
-    user_id: str = Depends(verify_clerk_session),
-):
-    """Update user's callsign and region"""
-    try:
-        # Update user profile using the service function
-        updated_user = user_service.update_user_profile(
-            db=db,
-            clerk_user_id=user_id,
-            callsign=profile_data.callsign,
-            region=profile_data.region,
-        )
-
-        if not updated_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
-
-        return UserResponse.from_orm(updated_user)
-
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        print(f"Profile update error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
 
 
 @app.get("/")
