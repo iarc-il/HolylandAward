@@ -68,13 +68,29 @@ class AdifService:
 
         return areas
 
+    def _clean_callsign(self, callsign: str) -> str:
+        """
+        Clean a callsign by removing forward slash and any character following it.
+        """
+        if not callsign:
+            return ""
+
+        # Find the forward slash and take everything before it
+        slash_index = callsign.find("/")
+        if slash_index != -1:
+            return callsign[:slash_index]
+        return callsign
+
     def _get_spotter(self, qso_dict: dict) -> str:
         """
         Extract the spotter from the QSO dictionary.
         """
-        if qso_dict.get("STATION_CALLSIGN", "") == self.spotter_callsign:
+        station_callsign = self._clean_callsign(qso_dict.get("STATION_CALLSIGN", ""))
+        operator = self._clean_callsign(qso_dict.get("OPERATOR", ""))
+
+        if station_callsign == self.spotter_callsign:
             return self.spotter_callsign
-        elif qso_dict.get("OPERATOR", "") == self.spotter_callsign:
+        elif operator == self.spotter_callsign:
             return self.spotter_callsign
         return ""  # No spotter found
 
@@ -90,7 +106,7 @@ class AdifService:
                     "date": qso.get("QSO_DATE", ""),
                     "freq": qso.get("FREQ", ""),
                     "spotter": self._get_spotter(qso),
-                    "dx": qso.get("CALL", ""),
+                    "dx": self._clean_callsign(qso.get("CALL", "")),
                     "area": area,
                 }
                 valid_entries.append(entry)
