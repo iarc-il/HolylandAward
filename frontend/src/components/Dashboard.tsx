@@ -2,10 +2,19 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import UserDetailsDialog from "./UserDetailsDialog";
+import AreasRegionsDialog from "./AreasRegionsDialog";
+import { useUserAreasAndRegions } from "../api/useUserAreasAndRegions";
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [areasDialogOpen, setAreasDialogOpen] = useState(false);
+  const [regionsDialogOpen, setRegionsDialogOpen] = useState(false);
+  const {
+    data: userAreasData,
+    isLoading: areasLoading,
+    error: areasError,
+  } = useUserAreasAndRegions();
 
   // Check if dialog should be open based on URL params
   useEffect(() => {
@@ -38,17 +47,55 @@ const Dashboard = () => {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-6 border rounded-lg">
-          <h3 className="font-semibold">Total QSOs</h3>
-          <p className="text-2xl font-bold">0</p>
+        <div
+          className="p-6 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() =>
+            !areasLoading && !areasError && setAreasDialogOpen(true)
+          }
+        >
+          <h3 className="font-semibold">Total Areas</h3>
+          <p className="text-2xl font-bold">
+            {areasLoading
+              ? "..."
+              : areasError
+              ? "N/A"
+              : userAreasData?.total_areas ?? 0}
+          </p>
+          {!areasLoading && !areasError && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Click to view areas
+            </p>
+          )}
+        </div>
+        <div
+          className="p-6 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() =>
+            !areasLoading && !areasError && setRegionsDialogOpen(true)
+          }
+        >
+          <h3 className="font-semibold">Total Regions</h3>
+          <p className="text-2xl font-bold">
+            {areasLoading
+              ? "..."
+              : areasError
+              ? "N/A"
+              : userAreasData?.total_regions ?? 0}
+          </p>
+          {!areasLoading && !areasError && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Click to view regions
+            </p>
+          )}
         </div>
         <div className="p-6 border rounded-lg">
-          <h3 className="font-semibold">Areas Worked</h3>
-          <p className="text-2xl font-bold">0</p>
-        </div>
-        <div className="p-6 border rounded-lg">
-          <h3 className="font-semibold">Awards Earned</h3>
-          <p className="text-2xl font-bold">0</p>
+          <h3 className="font-semibold">Callsign</h3>
+          <p className="text-2xl font-bold">
+            {areasLoading
+              ? "..."
+              : areasError
+              ? "N/A"
+              : userAreasData?.callsign ?? "Not Set"}
+          </p>
         </div>
       </div>
 
@@ -57,6 +104,24 @@ const Dashboard = () => {
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
         onSuccess={handleUserDetailsSuccess}
+      />
+
+      {/* Areas Dialog */}
+      <AreasRegionsDialog
+        isOpen={areasDialogOpen}
+        onClose={() => setAreasDialogOpen(false)}
+        title="Areas"
+        items={userAreasData?.areas ?? []}
+        isLoading={areasLoading}
+      />
+
+      {/* Regions Dialog */}
+      <AreasRegionsDialog
+        isOpen={regionsDialogOpen}
+        onClose={() => setRegionsDialogOpen(false)}
+        title="Regions"
+        items={userAreasData?.regions ?? []}
+        isLoading={areasLoading}
       />
     </div>
   );

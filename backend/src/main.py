@@ -9,12 +9,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from adif_service import AdifService
 from database import get_db
-from qsos.qsos_repository import QSORepository
+from qsos.repository import insert_qsos, get_areas_by_spotter
 from qsos.schema import QSO
 from users import service as user_service
 from users.repository import get_user_by_clerk_id
 from users.schema import UserProfileUpdateRequest, UserResponse
 from users.router import router as users_router
+from qsos.router import router as qsos_router
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from utils import verify_clerk_session
@@ -36,13 +37,9 @@ app.add_middleware(
 
 # Include routers
 app.include_router(users_router)
+app.include_router(qsos_router)
 
 bearer_scheme = HTTPBearer()
-
-
-# Dependency function to get repository
-def get_qso_repository(db: Session = Depends(get_db)) -> QSORepository:
-    return QSORepository(db)
 
 
 @app.post("/clerk-webhook")
@@ -87,11 +84,11 @@ def read_root():
 @app.get("/areas/{spotter_callsign}")
 def get_all_areas(
     spotter_callsign: str,
-    repo: QSORepository = Depends(get_qso_repository),
+    db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
     print(f"user_id: {user_id}")
-    areas = repo.get_areas_by_spotter(spotter_callsign)
+    areas = get_areas_by_spotter(db, spotter_callsign)
     return {"areas": areas}
 
 
@@ -99,7 +96,7 @@ def get_all_areas(
 async def upload_file(
     file: UploadFile = File(...),
     spotter_callsign: str = "4Z5SL",
-    repo: QSORepository = Depends(get_qso_repository),
+    db: Session = Depends(get_db),
 ):
     contents = await file.read()
     with open(f"temp_{file.filename}", "wb") as f:
@@ -121,8 +118,8 @@ async def upload_file(
         )
         qso_objects.append(qso_obj)
 
-    # Save to database using injected repository
-    saved_qsos = repo.insert_qsos(qso_objects)
+    # Save to database using functional repository
+    saved_qsos = insert_qsos(db, qso_objects)
 
     os.remove(f"temp_{file.filename}")
     return {"message": f"Processed {len(saved_qsos)} QSO entries", "qsos": saved_qsos}
