@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useUpdateProfile } from "@/api/useUpdateProfile";
+import { useProfile } from "@/api/useProfile";
 
 // Zod validation schema
 const userDetailsSchema = z
@@ -58,11 +58,11 @@ const UserDetailsDialog = ({
     resolver: zodResolver(userDetailsSchema),
   });
 
-  const updateProfileMutation = useUpdateProfile();
+  const { updateProfileAsync, isUpdating } = useProfile();
 
   const onFormSubmit = async (data: UserDetailsFormData) => {
     try {
-      await updateProfileMutation.mutateAsync({
+      await updateProfileAsync({
         callsign: data.callsign,
         region: data.region,
       });
@@ -154,8 +154,8 @@ const UserDetailsDialog = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={updateProfileMutation.isPending}>
-              {updateProfileMutation.isPending ? "Saving..." : "Save Profile"}
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? "Saving..." : "Save Profile"}
             </Button>
           </DialogFooter>
         </form>
