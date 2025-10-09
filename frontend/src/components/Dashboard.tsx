@@ -4,17 +4,36 @@ import { toast } from "sonner";
 import UserDetailsDialog from "./UserDetailsDialog";
 import AreasRegionsDialog from "./AreasRegionsDialog";
 import { useUserAreasAndRegions } from "../api/useUserAreasAndRegions";
+import { useProfile } from "../api/useProfile";
+
+// Get required areas and regions based on user's region
+const getRequiredAmounts = (region?: number) => {
+  switch (region) {
+    case 1:
+      return { areas: 150, regions: 18 };
+    case 2:
+      return { areas: 100, regions: 13 };
+    case 3:
+      return { areas: 50, regions: 13 };
+    default:
+      return { areas: 0, regions: 0 };
+  }
+};
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [areasDialogOpen, setAreasDialogOpen] = useState(false);
   const [regionsDialogOpen, setRegionsDialogOpen] = useState(false);
+
+  const { profile } = useProfile();
   const {
     data: userAreasData,
     isLoading: areasLoading,
     error: areasError,
   } = useUserAreasAndRegions();
+
+  const requiredAmounts = getRequiredAmounts(profile?.region);
 
   // Check if dialog should be open based on URL params
   useEffect(() => {
@@ -53,14 +72,38 @@ const Dashboard = () => {
             !areasLoading && !areasError && setAreasDialogOpen(true)
           }
         >
-          <h3 className="font-semibold">Total Areas</h3>
-          <p className="text-2xl font-bold">
-            {areasLoading
-              ? "..."
-              : areasError
-              ? "N/A"
-              : userAreasData?.total_areas ?? 0}
-          </p>
+          <h3 className="font-semibold mb-2">Areas</h3>
+          {areasLoading ? (
+            <p className="text-2xl font-bold">...</p>
+          ) : areasError ? (
+            <p className="text-2xl font-bold text-destructive">N/A</p>
+          ) : (
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-primary">
+                  {userAreasData?.total_areas ?? 0}
+                </span>
+                <span className="text-lg text-muted-foreground">/</span>
+                <span className="text-lg font-semibold text-muted-foreground">
+                  {requiredAmounts.areas}
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(
+                      ((userAreasData?.total_areas ?? 0) /
+                        requiredAmounts.areas) *
+                        100,
+                      100
+                    )}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
           {!areasLoading && !areasError && (
             <p className="text-xs text-muted-foreground mt-2">
               Click to view areas
@@ -73,14 +116,38 @@ const Dashboard = () => {
             !areasLoading && !areasError && setRegionsDialogOpen(true)
           }
         >
-          <h3 className="font-semibold">Total Regions</h3>
-          <p className="text-2xl font-bold">
-            {areasLoading
-              ? "..."
-              : areasError
-              ? "N/A"
-              : userAreasData?.total_regions ?? 0}
-          </p>
+          <h3 className="font-semibold mb-2">Regions</h3>
+          {areasLoading ? (
+            <p className="text-2xl font-bold">...</p>
+          ) : areasError ? (
+            <p className="text-2xl font-bold text-destructive">N/A</p>
+          ) : (
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-primary">
+                  {userAreasData?.total_regions ?? 0}
+                </span>
+                <span className="text-lg text-muted-foreground">/</span>
+                <span className="text-lg font-semibold text-muted-foreground">
+                  {requiredAmounts.regions}
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(
+                      ((userAreasData?.total_regions ?? 0) /
+                        requiredAmounts.regions) *
+                        100,
+                      100
+                    )}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
           {!areasLoading && !areasError && (
             <p className="text-xs text-muted-foreground mt-2">
               Click to view regions

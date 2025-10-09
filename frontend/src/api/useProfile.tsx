@@ -89,7 +89,7 @@ export const useProfile = () => {
 
       return profile;
     },
-    enabled: isSignedIn, // Only run query if user is signed in
+    enabled: isSignedIn && !cachedProfile, // Only fetch if signed in AND no cached data
     retry: 1, // Only retry once on failure
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
@@ -135,10 +135,20 @@ export const useProfile = () => {
     },
   });
 
+  // Create combined profile data (prioritize cached data)
+  const combinedProfile = cachedProfile
+    ? ({
+        id: 0,
+        clerk_user_id: userId || "",
+        callsign: cachedProfile.callsign,
+        region: cachedProfile.region,
+      } as UserProfile)
+    : profileQuery.data;
+
   return {
-    // Profile query data and states
-    profile: profileQuery.data,
-    isLoading: profileQuery.isLoading,
+    // Profile query data and states (use combined profile)
+    profile: combinedProfile,
+    isLoading: !cachedProfile && profileQuery.isLoading,
     error: profileQuery.error,
     isError: profileQuery.isError,
 
@@ -150,17 +160,16 @@ export const useProfile = () => {
     isUpdateError: updateMutation.isError,
 
     // Combined loading state
-    isAnyLoading: profileQuery.isLoading || updateMutation.isPending,
+    isAnyLoading:
+      (!cachedProfile && profileQuery.isLoading) || updateMutation.isPending,
 
     // Refetch function
     refetch: profileQuery.refetch,
 
-    // Profile completion helpers
-    hasCallsign: !!profileQuery.data?.callsign,
-    hasRegion: !!profileQuery.data?.region,
-    isProfileComplete: !!(
-      profileQuery.data?.callsign && profileQuery.data?.region
-    ),
+    // Profile completion helpers (use combined profile)
+    hasCallsign: !!combinedProfile?.callsign,
+    hasRegion: !!combinedProfile?.region,
+    isProfileComplete: !!(combinedProfile?.callsign && combinedProfile?.region),
 
     // Cache management
     hasCachedData: shouldUseCache && !!cachedProfile,
