@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 
 import { areas, qsoData } from "@/data/areas";
 import { Area } from "@/types/map";
-import useAreas from "./hooks/useAreas";
+import { useUserAreasAndRegions } from "@/api/useUserAreasAndRegions";
 // TextOverlay class factory - creates the class after Google Maps is loaded
 const createTextOverlayClass = () => {
   return class TextOverlay extends (window as any).google.maps.OverlayView {
@@ -61,16 +61,19 @@ const Map: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null); // google.maps.Map when loaded
   const [searchValue, setSearchValue] = useState("");
-  const [polygons, setPolygons] = useState<any[]>([]); // google.maps.Polygon[] when loaded
-  const [markers, setMarkers] = useState<any[]>([]); // google.maps.Marker[] when loaded
-  const [overlays, setOverlays] = useState<any[]>([]); // TextOverlay[] when loaded
-  const [gridOverlays, setGridOverlays] = useState<any[]>([]); // google.maps.Polygon[] when loaded
-  const [gridLines, setGridLines] = useState<any[]>([]); // google.maps.Polyline[] when loaded
+  const polygonsRef = useRef<any[]>([]); // google.maps.Polygon[] when loaded
+  const markersRef = useRef<any[]>([]); // google.maps.Marker[] when loaded
+  const overlaysRef = useRef<any[]>([]); // TextOverlay[] when loaded
+  const gridOverlaysRef = useRef<any[]>([]); // google.maps.Polygon[] when loaded
+  const gridLinesRef = useRef<any[]>([]); // google.maps.Polyline[] when loaded
   const [TextOverlay, setTextOverlay] = useState<any>(null); // TextOverlay class when loaded
   const mapInitialized = useRef(false); // Add a ref to track initialization
 
-  const { data: _areas } = useAreas("4Z1KD");
-  console.log("areas", _areas);
+  const {
+    data: { areas: userAreas } = {},
+    isLoading,
+    isError,
+  } = useUserAreasAndRegions();
 
   // Grid constants from original HTML
   const northLat = 33.383;
@@ -81,100 +84,372 @@ const Map: React.FC = () => {
   const lngSquareSize = (eastLng - westLng) / 16;
 
   // Grid utility functions from original HTML
-  const getLatIndex = (lat: number) => {
-    const latIndex = (lat - northLat) * (1 / latSquareSize);
-    return parseInt(latIndex.toString());
-  };
+  const getLatIndex = useCallback(
+    (lat: number) => {
+      const latIndex = (lat - northLat) * (1 / latSquareSize);
+      return parseInt(latIndex.toString());
+    },
+    [latSquareSize]
+  );
 
-  const getLngIndex = (lng: number) => {
-    const lngIndex = (lng - westLng) * (1 / lngSquareSize);
-    return parseInt(lngIndex.toString());
-  };
+  const getLngIndex = useCallback(
+    (lng: number) => {
+      const lngIndex = (lng - westLng) * (1 / lngSquareSize);
+      return parseInt(lngIndex.toString());
+    },
+    [lngSquareSize]
+  );
 
-  const getSquareByLatLng = (lat: number, lng: number) => {
-    let latProjection = getLatIndex(lat);
-    let lngProjection = getLngIndex(lng);
+  const getSquareByLatLng = useCallback(
+    (lat: number, lng: number) => {
+      let latProjection = getLatIndex(lat);
+      let lngProjection = getLngIndex(lng);
 
-    if (latProjection < 10) {
-      latProjection = parseInt("0" + latProjection);
-    }
-    if (lngProjection > 7) lngProjection++;
-    const lngChar = String.fromCharCode(65 + lngProjection);
-    const square = lngChar + latProjection.toString().padStart(2, "0");
-    return square;
-  };
-
-  // 1. Initial Map and API Loader
-  useEffect(() => {
-    const initMap = async () => {
-      const loader = new Loader({
-        apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-        version: "weekly",
-        libraries: ["places", "geometry"],
-      });
-
-      try {
-        await loader.load();
-        const TextOverlayClass = createTextOverlayClass();
-        setTextOverlay(() => TextOverlayClass);
-
-        if (mapRef.current) {
-          const mapInstance = new (window as any).google.maps.Map(
-            mapRef.current,
-            {
-              center: { lat: 31.5, lng: 35.0 }, // Center of Israel
-              zoom: 8,
-              mapTypeId: (window as any).google.maps.MapTypeId.ROADMAP,
-            }
-          );
-          setMap(mapInstance);
-        }
-      } catch (error) {
-        console.error("Error loading Google Maps:", error);
+      if (latProjection < 10) {
+        latProjection = parseInt("0" + latProjection);
       }
-    };
+      if (lngProjection > 7) lngProjection++;
+      const lngChar = String.fromCharCode(65 + lngProjection);
+      const square = lngChar + latProjection.toString().padStart(2, "0");
+      return square;
+    },
+    [getLatIndex, getLngIndex]
+  );
 
-    initMap();
-  }, []);
-
-  // 2. Separate useEffect to run showGrid only once
-  useEffect(() => {
-    // Check if the map and TextOverlay are ready AND if the grid hasn't been shown yet
-    if (map && TextOverlay && !mapInitialized.current) {
-      showGrid();
-      mapInitialized.current = true; // Set the flag to true after the first call
-    }
-  }, [map, TextOverlay]);
-
-  const clearMap = () => {
+  const clearMap = useCallback(() => {
     // Clear polygons
-    polygons.forEach((polygon) => polygon.setMap(null));
-    setPolygons([]);
+    polygonsRef.current.forEach((polygon: any) => polygon.setMap(null));
+    polygonsRef.current = [];
 
     // Clear markers
-    markers.forEach((marker) => marker.setMap(null));
-    setMarkers([]);
+    markersRef.current.forEach((marker: any) => marker.setMap(null));
+    markersRef.current = [];
 
     // Clear overlays
-    overlays.forEach((overlay) => overlay.setMap(null));
-    setOverlays([]);
+    overlaysRef.current.forEach((overlay: any) => overlay.setMap(null));
+    overlaysRef.current = [];
 
     // Clear grid overlays
-    gridOverlays.forEach((grid) => grid.setMap(null));
-    setGridOverlays([]);
+    gridOverlaysRef.current.forEach((grid: any) => grid.setMap(null));
+    gridOverlaysRef.current = [];
 
     // Clear grid lines
-    gridLines.forEach((line) => line.setMap(null));
-    setGridLines([]);
-  };
+    gridLinesRef.current.forEach((line: any) => line.setMap(null));
+    gridLinesRef.current = [];
+  }, []);
 
-  const showGrid = () => {
+  // Helper function to check if a point is inside a polygon using Google Maps geometry
+  const isPointInPolygon = useCallback((point: any, polygon: any) => {
+    if (!(window as any).google?.maps?.geometry?.poly) {
+      return false;
+    }
+    return (window as any).google.maps.geometry.poly.containsLocation(
+      point,
+      polygon
+    );
+  }, []);
+
+  // Point-in-polygon test using ray casting algorithm
+  const pointInPolygon = useCallback(
+    (
+      point: { lat: number; lng: number },
+      polygon: { lat: number; lng: number }[]
+    ) => {
+      let inside = false;
+      const x = point.lng;
+      const y = point.lat;
+
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].lng;
+        const yi = polygon[i].lat;
+        const xj = polygon[j].lng;
+        const yj = polygon[j].lat;
+
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+          inside = !inside;
+        }
+      }
+      return inside;
+    },
+    []
+  );
+
+  // Line intersection helper
+  const getLineIntersection = useCallback(
+    (
+      p1: { lat: number; lng: number },
+      p2: { lat: number; lng: number },
+      p3: { lat: number; lng: number },
+      p4: { lat: number; lng: number }
+    ) => {
+      const x1 = p1.lng,
+        y1 = p1.lat;
+      const x2 = p2.lng,
+        y2 = p2.lat;
+      const x3 = p3.lng,
+        y3 = p3.lat;
+      const x4 = p4.lng,
+        y4 = p4.lat;
+
+      const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+      if (Math.abs(denom) < 1e-10) return null; // Lines are parallel
+
+      const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+      const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+        return {
+          lat: y1 + t * (y2 - y1),
+          lng: x1 + t * (x2 - x1),
+        };
+      }
+      return null;
+    },
+    []
+  );
+
+  // Simple polygon intersection using Sutherland-Hodgman clipping
+  const getPolygonIntersection = useCallback(
+    (
+      subjectPoly: { lat: number; lng: number }[],
+      clipPoly: { lat: number; lng: number }[]
+    ) => {
+      let outputList = [...subjectPoly];
+
+      for (let i = 0; i < clipPoly.length; i++) {
+        if (outputList.length === 0) break;
+
+        const clipVertex1 = clipPoly[i];
+        const clipVertex2 = clipPoly[(i + 1) % clipPoly.length];
+
+        const inputList = [...outputList];
+        outputList = [];
+
+        if (inputList.length === 0) continue;
+
+        let s = inputList[inputList.length - 1];
+
+        for (const e of inputList) {
+          // Check if point e is inside the clipping edge
+          const cross1 =
+            (clipVertex2.lng - clipVertex1.lng) * (e.lat - clipVertex1.lat) -
+            (clipVertex2.lat - clipVertex1.lat) * (e.lng - clipVertex1.lng);
+          const cross2 =
+            (clipVertex2.lng - clipVertex1.lng) * (s.lat - clipVertex1.lat) -
+            (clipVertex2.lat - clipVertex1.lat) * (s.lng - clipVertex1.lng);
+
+          if (cross1 >= 0) {
+            // e is inside
+            if (cross2 < 0) {
+              // s is outside, e is inside
+              const intersection = getLineIntersection(
+                s,
+                e,
+                clipVertex1,
+                clipVertex2
+              );
+              if (intersection) outputList.push(intersection);
+            }
+            outputList.push(e);
+          } else if (cross2 >= 0) {
+            // s is inside, e is outside
+            const intersection = getLineIntersection(
+              s,
+              e,
+              clipVertex1,
+              clipVertex2
+            );
+            if (intersection) outputList.push(intersection);
+          }
+          s = e;
+        }
+      }
+
+      return outputList;
+    },
+    [getLineIntersection]
+  );
+
+  // Parse area code to extract square and area info - from original HTML
+  const parseCode = useCallback((code: string): [number, number, Area] => {
+    const match = code.match(/^([A-Z])(\d\d)([A-Z]{2})$/);
+    if (!match) {
+      throw new Error("Invalid format");
+    }
+
+    const [, letter, numberStr, suffix] = match;
+
+    // Alphabet index (skipping 'I')
+    const alphabet = "ABCDEFGHJKLMNOPQRSTUVWXYZ"; // Note: 'I' is skipped
+    const letterIndex = alphabet.indexOf(letter.toUpperCase());
+    if (letterIndex === -1) {
+      throw new Error("Invalid letter (possibly 'I')");
+    }
+
+    // Parse number
+    const numberIndex = parseInt(numberStr, 10);
+
+    // Find suffix in the area list by name
+    const matchedArea = areas.find(
+      (area) => area.name.toUpperCase() === suffix.toUpperCase()
+    );
+    if (!matchedArea) {
+      throw new Error("Suffix not found in area list");
+    }
+
+    return [numberIndex, letterIndex, matchedArea];
+  }, []);
+
+  // Paint square by code - with fallback approach
+  const paintSquareByCode = useCallback(
+    (code: string) => {
+      if (!map) return false;
+
+      try {
+        const [latProjection, lngProjection, areaData] = parseCode(code);
+
+        // Calculate square bounds
+        const northLatSquare = northLat + (latProjection + 1) * latSquareSize;
+        const southLatSquare = northLat + latProjection * latSquareSize;
+        const westLngSquare = westLng + lngProjection * lngSquareSize;
+        const eastLngSquare = westLng + (lngProjection + 1) * lngSquareSize;
+
+        // Create area polygon for Google Maps
+        const areaPath = areaData.coords.map((coord: any) => ({
+          lat: coord.lat,
+          lng: coord.lng,
+        }));
+        const areaPolygon = new (window as any).google.maps.Polygon({
+          paths: areaPath,
+        });
+
+        // Check if square corners are inside the area
+        const corners = [
+          { lat: northLatSquare, lng: westLngSquare },
+          { lat: northLatSquare, lng: eastLngSquare },
+          { lat: southLatSquare, lng: eastLngSquare },
+          { lat: southLatSquare, lng: westLngSquare },
+        ];
+
+        const cornersInside = corners.map((corner) =>
+          (window as any).google.maps.geometry.poly.containsLocation(
+            new (window as any).google.maps.LatLng(corner.lat, corner.lng),
+            areaPolygon
+          )
+        );
+
+        // If all corners are inside, draw the full square
+        if (cornersInside.every((inside) => inside)) {
+          const squarePolygon = new (window as any).google.maps.Polygon({
+            paths: corners,
+            strokeColor: "#00FF00",
+            strokeOpacity: 1.0,
+            strokeWeight: 3,
+            fillColor: "#00FF00",
+            fillOpacity: 0.3,
+            zIndex: 999,
+          });
+          squarePolygon.setMap(map);
+          gridOverlaysRef.current.push(squarePolygon);
+          return true;
+        }
+
+        // If no corners are inside, check if there's any intersection by sampling points
+        if (!cornersInside.some((inside) => inside)) {
+          // Sample points within the square to check for intersection
+          let hasIntersection = false;
+          const sampleCount = 5; // 5x5 grid
+          for (let i = 0; i < sampleCount && !hasIntersection; i++) {
+            for (let j = 0; j < sampleCount && !hasIntersection; j++) {
+              const lat =
+                southLatSquare +
+                (i / (sampleCount - 1)) * (northLatSquare - southLatSquare);
+              const lng =
+                westLngSquare +
+                (j / (sampleCount - 1)) * (eastLngSquare - westLngSquare);
+              const point = new (window as any).google.maps.LatLng(lat, lng);
+              if (
+                (window as any).google.maps.geometry.poly.containsLocation(
+                  point,
+                  areaPolygon
+                )
+              ) {
+                hasIntersection = true;
+              }
+            }
+          }
+
+          if (!hasIntersection) {
+            console.log("No intersection found for", code);
+            return false;
+          }
+        }
+
+        // For partial intersection, create a fine grid within the square and only draw cells that are inside the area
+        const gridSize = 10; // 10x10 grid for fine resolution
+        const latStep = (northLatSquare - southLatSquare) / gridSize;
+        const lngStep = (eastLngSquare - westLngSquare) / gridSize;
+
+        for (let i = 0; i < gridSize; i++) {
+          for (let j = 0; j < gridSize; j++) {
+            const cellSouthLat = southLatSquare + i * latStep;
+            const cellNorthLat = southLatSquare + (i + 1) * latStep;
+            const cellWestLng = westLngSquare + j * lngStep;
+            const cellEastLng = westLngSquare + (j + 1) * lngStep;
+
+            // Check if the center of this cell is inside the area
+            const centerLat = (cellNorthLat + cellSouthLat) / 2;
+            const centerLng = (cellEastLng + cellWestLng) / 2;
+            const centerPoint = new (window as any).google.maps.LatLng(
+              centerLat,
+              centerLng
+            );
+
+            if (
+              (window as any).google.maps.geometry.poly.containsLocation(
+                centerPoint,
+                areaPolygon
+              )
+            ) {
+              // This cell is inside the area, draw it
+              const cellCorners = [
+                { lat: cellNorthLat, lng: cellWestLng },
+                { lat: cellNorthLat, lng: cellEastLng },
+                { lat: cellSouthLat, lng: cellEastLng },
+                { lat: cellSouthLat, lng: cellWestLng },
+              ];
+
+              const cellPolygon = new (window as any).google.maps.Polygon({
+                paths: cellCorners,
+                strokeColor: "#00FF00",
+                strokeOpacity: 0.8,
+                strokeWeight: 1,
+                fillColor: "#00FF00",
+                fillOpacity: 0.3,
+                zIndex: 999,
+              });
+              cellPolygon.setMap(map);
+              gridOverlaysRef.current.push(cellPolygon);
+            }
+          }
+        }
+        return true;
+      } catch (error) {
+        console.error("Failed to paint square:", code, error);
+        return false;
+      }
+    },
+    [map, parseCode, northLat, latSquareSize, westLng, lngSquareSize]
+  );
+
+  const showGrid = useCallback(() => {
     if (!map || !TextOverlay) return;
 
     clearMap();
     const newGridLines: unknown[] = [];
     const newPolygons: unknown[] = [];
     const newOverlays: unknown[] = [];
+    const newGridOverlays: unknown[] = []; // For highlighting user areas
 
     // First, add area polygons
     areas.forEach((area: Area) => {
@@ -298,10 +573,87 @@ const Map: React.FC = () => {
       });
     }
 
-    setGridLines(newGridLines);
-    setPolygons(newPolygons);
-    setOverlays(newOverlays);
-  };
+    // Paint user's worked areas using intersection logic
+    if (userAreas && userAreas.length > 0) {
+      userAreas.forEach((areaCode: string) => {
+        try {
+          const success = paintSquareByCode(areaCode);
+          if (!success) {
+            console.log("Could not paint area:", areaCode);
+          }
+        } catch (error) {
+          console.log("Failed to paint area:", areaCode, error);
+        }
+      });
+    }
+
+    gridLinesRef.current = newGridLines;
+    polygonsRef.current = newPolygons;
+    overlaysRef.current = newOverlays;
+    gridOverlaysRef.current = newGridOverlays;
+  }, [
+    map,
+    TextOverlay,
+    userAreas,
+    clearMap,
+    getSquareByLatLng,
+    paintSquareByCode,
+    latSquareSize,
+    lngSquareSize,
+    northLat,
+    westLng,
+    eastLng,
+    southLat,
+  ]);
+
+  // 1. Initial Map and API Loader
+  useEffect(() => {
+    const initMap = async () => {
+      const loader = new Loader({
+        apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+        version: "weekly",
+        libraries: ["places", "geometry"],
+      });
+
+      try {
+        await loader.load();
+        const TextOverlayClass = createTextOverlayClass();
+        setTextOverlay(() => TextOverlayClass);
+
+        if (mapRef.current) {
+          const mapInstance = new (window as any).google.maps.Map(
+            mapRef.current,
+            {
+              center: { lat: 31.5, lng: 35.0 }, // Center of Israel
+              zoom: 8,
+              mapTypeId: (window as any).google.maps.MapTypeId.ROADMAP,
+            }
+          );
+          setMap(mapInstance);
+        }
+      } catch (error) {
+        console.error("Error loading Google Maps:", error);
+      }
+    };
+
+    initMap();
+  }, []);
+
+  // 2. Separate useEffect to run showGrid only once
+  useEffect(() => {
+    // Check if the map and TextOverlay are ready AND if the grid hasn't been shown yet
+    if (map && TextOverlay && !mapInitialized.current) {
+      showGrid();
+      mapInitialized.current = true; // Set the flag to true after the first call
+    }
+  }, [map, TextOverlay, showGrid]);
+
+  // 3. Update map when user areas data changes
+  useEffect(() => {
+    if (map && TextOverlay && mapInitialized.current && !isLoading) {
+      showGrid(); // Re-render grid with user areas
+    }
+  }, [userAreas, isLoading, map, TextOverlay, showGrid]);
 
   const showAreas = () => {
     if (!map || !TextOverlay) return;
@@ -331,10 +683,10 @@ const Map: React.FC = () => {
         area.name
       );
       overlay.setMap(map);
-      setOverlays((prev) => [...prev, overlay]);
+      overlaysRef.current = [...overlaysRef.current, overlay];
     });
 
-    setPolygons(newPolygons);
+    polygonsRef.current = newPolygons;
   };
 
   const showMissingSquares = () => {
@@ -378,12 +730,12 @@ const Map: React.FC = () => {
             square
           );
           overlay.setMap(map);
-          setOverlays((prev) => [...prev, overlay]);
+          overlaysRef.current = [...overlaysRef.current, overlay];
         }
       }
     }
 
-    setGridOverlays(newGridOverlays);
+    gridOverlaysRef.current = newGridOverlays;
   };
 
   const showWorkedSquares = () => {
@@ -402,8 +754,8 @@ const Map: React.FC = () => {
       console.log(`Worked square: ${square} from area: ${qso.area}`);
     });
 
-    setMarkers(newMarkers);
-    setGridOverlays(newGridOverlays);
+    markersRef.current = newMarkers;
+    gridOverlaysRef.current = newGridOverlays;
   };
 
   return (
