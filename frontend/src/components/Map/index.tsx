@@ -4,6 +4,14 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { areas, qsoData } from "@/data/areas";
 import { Area } from "@/types/map";
 import { useUserAreasAndRegions } from "@/api/useUserAreasAndRegions";
+
+// Declare global JSTS
+declare global {
+  interface Window {
+    jsts: any;
+  }
+}
+
 // TextOverlay class factory - creates the class after Google Maps is loaded
 const createTextOverlayClass = () => {
   return class TextOverlay extends (window as any).google.maps.OverlayView {
@@ -138,138 +146,6 @@ const Map: React.FC = () => {
     gridLinesRef.current = [];
   }, []);
 
-  // Helper function to check if a point is inside a polygon using Google Maps geometry
-  const isPointInPolygon = useCallback((point: any, polygon: any) => {
-    if (!(window as any).google?.maps?.geometry?.poly) {
-      return false;
-    }
-    return (window as any).google.maps.geometry.poly.containsLocation(
-      point,
-      polygon
-    );
-  }, []);
-
-  // Point-in-polygon test using ray casting algorithm
-  const pointInPolygon = useCallback(
-    (
-      point: { lat: number; lng: number },
-      polygon: { lat: number; lng: number }[]
-    ) => {
-      let inside = false;
-      const x = point.lng;
-      const y = point.lat;
-
-      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const xi = polygon[i].lng;
-        const yi = polygon[i].lat;
-        const xj = polygon[j].lng;
-        const yj = polygon[j].lat;
-
-        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-          inside = !inside;
-        }
-      }
-      return inside;
-    },
-    []
-  );
-
-  // Line intersection helper
-  const getLineIntersection = useCallback(
-    (
-      p1: { lat: number; lng: number },
-      p2: { lat: number; lng: number },
-      p3: { lat: number; lng: number },
-      p4: { lat: number; lng: number }
-    ) => {
-      const x1 = p1.lng,
-        y1 = p1.lat;
-      const x2 = p2.lng,
-        y2 = p2.lat;
-      const x3 = p3.lng,
-        y3 = p3.lat;
-      const x4 = p4.lng,
-        y4 = p4.lat;
-
-      const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-      if (Math.abs(denom) < 1e-10) return null; // Lines are parallel
-
-      const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
-      const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
-
-      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-        return {
-          lat: y1 + t * (y2 - y1),
-          lng: x1 + t * (x2 - x1),
-        };
-      }
-      return null;
-    },
-    []
-  );
-
-  // Simple polygon intersection using Sutherland-Hodgman clipping
-  const getPolygonIntersection = useCallback(
-    (
-      subjectPoly: { lat: number; lng: number }[],
-      clipPoly: { lat: number; lng: number }[]
-    ) => {
-      let outputList = [...subjectPoly];
-
-      for (let i = 0; i < clipPoly.length; i++) {
-        if (outputList.length === 0) break;
-
-        const clipVertex1 = clipPoly[i];
-        const clipVertex2 = clipPoly[(i + 1) % clipPoly.length];
-
-        const inputList = [...outputList];
-        outputList = [];
-
-        if (inputList.length === 0) continue;
-
-        let s = inputList[inputList.length - 1];
-
-        for (const e of inputList) {
-          // Check if point e is inside the clipping edge
-          const cross1 =
-            (clipVertex2.lng - clipVertex1.lng) * (e.lat - clipVertex1.lat) -
-            (clipVertex2.lat - clipVertex1.lat) * (e.lng - clipVertex1.lng);
-          const cross2 =
-            (clipVertex2.lng - clipVertex1.lng) * (s.lat - clipVertex1.lat) -
-            (clipVertex2.lat - clipVertex1.lat) * (s.lng - clipVertex1.lng);
-
-          if (cross1 >= 0) {
-            // e is inside
-            if (cross2 < 0) {
-              // s is outside, e is inside
-              const intersection = getLineIntersection(
-                s,
-                e,
-                clipVertex1,
-                clipVertex2
-              );
-              if (intersection) outputList.push(intersection);
-            }
-            outputList.push(e);
-          } else if (cross2 >= 0) {
-            // s is inside, e is outside
-            const intersection = getLineIntersection(
-              s,
-              e,
-              clipVertex1,
-              clipVertex2
-            );
-            if (intersection) outputList.push(intersection);
-          }
-          s = e;
-        }
-      }
-
-      return outputList;
-    },
-    [getLineIntersection]
-  );
-
   // Parse area code to extract square and area info - from original HTML
   const parseCode = useCallback((code: string): [number, number, Area] => {
     const match = code.match(/^([A-Z])(\d\d)([A-Z]{2})$/);
@@ -300,148 +176,123 @@ const Map: React.FC = () => {
     return [numberIndex, letterIndex, matchedArea];
   }, []);
 
-  // Paint square by code - with fallback approach
+  // Helper function to create JSTS polygon from Google Maps polygon
+  const createJstsPolygon = useCallback(
+    (geometryFactory: any, polygon: any) => {
+      const path = polygon.getPath();
+      const coordinates = path
+        .getArray()
+        .map(
+          (coord: any) =>
+            new (window as any).jsts.geom.Coordinate(coord.lat(), coord.lng())
+        );
+      coordinates.push(coordinates[0]); // Close the polygon
+      const shell = geometryFactory.createLinearRing(coordinates);
+      return geometryFactory.createPolygon(shell);
+    },
+    []
+  );
+
+  // Paint square by code - with proper JSTS polygon intersection
   const paintSquareByCode = useCallback(
     (code: string) => {
-      if (!map) return false;
+      if (!map || !(window as any).jsts) return false;
 
       try {
         const [latProjection, lngProjection, areaData] = parseCode(code);
 
-        // Calculate square bounds
-        const northLatSquare = northLat + (latProjection + 1) * latSquareSize;
-        const southLatSquare = northLat + latProjection * latSquareSize;
-        const westLngSquare = westLng + lngProjection * lngSquareSize;
-        const eastLngSquare = westLng + (lngProjection + 1) * lngSquareSize;
+        // Create square coordinates - matching original HTML logic
+        const squareCoords = [
+          {
+            lat: northLat + latProjection * latSquareSize,
+            lng: westLng + lngProjection * lngSquareSize,
+          },
+          {
+            lat: northLat + (latProjection + 1) * latSquareSize,
+            lng: westLng + lngProjection * lngSquareSize,
+          },
+          {
+            lat: northLat + (latProjection + 1) * latSquareSize,
+            lng: westLng + (lngProjection + 1) * lngSquareSize,
+          },
+          {
+            lat: northLat + latProjection * latSquareSize,
+            lng: westLng + (lngProjection + 1) * lngSquareSize,
+          },
+        ];
 
-        // Create area polygon for Google Maps
+        // Create Google Maps polygons for intersection calculation
+        const squarePolygon = new (window as any).google.maps.Polygon({
+          paths: squareCoords,
+          strokeColor: "#FF0000",
+          strokeOpacity: 0,
+          strokeWeight: 2,
+          fillColor: "#FF0000",
+          fillOpacity: 0.2,
+          zIndex: 999,
+        });
+
         const areaPath = areaData.coords.map((coord: any) => ({
           lat: coord.lat,
           lng: coord.lng,
         }));
-        const areaPolygon = new (window as any).google.maps.Polygon({
+        const regionPolygon = new (window as any).google.maps.Polygon({
           paths: areaPath,
         });
 
-        // Check if square corners are inside the area
-        const corners = [
-          { lat: northLatSquare, lng: westLngSquare },
-          { lat: northLatSquare, lng: eastLngSquare },
-          { lat: southLatSquare, lng: eastLngSquare },
-          { lat: southLatSquare, lng: westLngSquare },
-        ];
-
-        const cornersInside = corners.map((corner) =>
-          (window as any).google.maps.geometry.poly.containsLocation(
-            new (window as any).google.maps.LatLng(corner.lat, corner.lng),
-            areaPolygon
-          )
+        // Calculate polygons intersection using JSTS - exactly like original HTML
+        const geometryFactory = new (window as any).jsts.geom.GeometryFactory();
+        const jstsSquarePolygon = createJstsPolygon(
+          geometryFactory,
+          squarePolygon
         );
+        const jstsRegionPolygon = createJstsPolygon(
+          geometryFactory,
+          regionPolygon
+        );
+        const intersection = jstsSquarePolygon.intersection(jstsRegionPolygon);
 
-        // If all corners are inside, draw the full square
-        if (cornersInside.every((inside) => inside)) {
-          const squarePolygon = new (window as any).google.maps.Polygon({
-            paths: corners,
-            strokeColor: "#00FF00",
-            strokeOpacity: 1.0,
-            strokeWeight: 3,
-            fillColor: "#00FF00",
-            fillOpacity: 0.3,
-            zIndex: 999,
-          });
-          squarePolygon.setMap(map);
-          gridOverlaysRef.current.push(squarePolygon);
-          return true;
+        // Convert intersection coordinates back to Google Maps format
+        const coords = intersection.getCoordinates().map((coord: any) => {
+          return { lat: coord.x, lng: coord.y };
+        });
+
+        // Only draw if there's an actual intersection
+        if (coords.length === 0) {
+          console.log("No intersection found for", code);
+          return false;
         }
 
-        // If no corners are inside, check if there's any intersection by sampling points
-        if (!cornersInside.some((inside) => inside)) {
-          // Sample points within the square to check for intersection
-          let hasIntersection = false;
-          const sampleCount = 5; // 5x5 grid
-          for (let i = 0; i < sampleCount && !hasIntersection; i++) {
-            for (let j = 0; j < sampleCount && !hasIntersection; j++) {
-              const lat =
-                southLatSquare +
-                (i / (sampleCount - 1)) * (northLatSquare - southLatSquare);
-              const lng =
-                westLngSquare +
-                (j / (sampleCount - 1)) * (eastLngSquare - westLngSquare);
-              const point = new (window as any).google.maps.LatLng(lat, lng);
-              if (
-                (window as any).google.maps.geometry.poly.containsLocation(
-                  point,
-                  areaPolygon
-                )
-              ) {
-                hasIntersection = true;
-              }
-            }
-          }
+        // Create and display the intersection polygon
+        const intersectionArea = new (window as any).google.maps.Polygon({
+          paths: coords,
+          strokeColor: "#00FF00", // Green for worked areas
+          strokeOpacity: 1.0,
+          strokeWeight: 2,
+          fillColor: "#00FF00",
+          fillOpacity: 0.3,
+          zIndex: 999,
+        });
 
-          if (!hasIntersection) {
-            console.log("No intersection found for", code);
-            return false;
-          }
-        }
+        intersectionArea.setMap(map);
+        gridOverlaysRef.current.push(intersectionArea);
 
-        // For partial intersection, create a fine grid within the square and only draw cells that are inside the area
-        const gridSize = 10; // 10x10 grid for fine resolution
-        const latStep = (northLatSquare - southLatSquare) / gridSize;
-        const lngStep = (eastLngSquare - westLngSquare) / gridSize;
-
-        for (let i = 0; i < gridSize; i++) {
-          for (let j = 0; j < gridSize; j++) {
-            const cellSouthLat = southLatSquare + i * latStep;
-            const cellNorthLat = southLatSquare + (i + 1) * latStep;
-            const cellWestLng = westLngSquare + j * lngStep;
-            const cellEastLng = westLngSquare + (j + 1) * lngStep;
-
-            // Check if the center of this cell is inside the area
-            const centerLat = (cellNorthLat + cellSouthLat) / 2;
-            const centerLng = (cellEastLng + cellWestLng) / 2;
-            const centerPoint = new (window as any).google.maps.LatLng(
-              centerLat,
-              centerLng
-            );
-
-            if (
-              (window as any).google.maps.geometry.poly.containsLocation(
-                centerPoint,
-                areaPolygon
-              )
-            ) {
-              // This cell is inside the area, draw it
-              const cellCorners = [
-                { lat: cellNorthLat, lng: cellWestLng },
-                { lat: cellNorthLat, lng: cellEastLng },
-                { lat: cellSouthLat, lng: cellEastLng },
-                { lat: cellSouthLat, lng: cellWestLng },
-              ];
-
-              const cellPolygon = new (window as any).google.maps.Polygon({
-                paths: cellCorners,
-                strokeColor: "#00FF00",
-                strokeOpacity: 0.8,
-                strokeWeight: 1,
-                fillColor: "#00FF00",
-                fillOpacity: 0.3,
-                zIndex: 999,
-              });
-              cellPolygon.setMap(map);
-              gridOverlaysRef.current.push(cellPolygon);
-            }
-          }
-        }
         return true;
       } catch (error) {
         console.error("Failed to paint square:", code, error);
         return false;
       }
     },
-    [map, parseCode, northLat, latSquareSize, westLng, lngSquareSize]
+    [
+      map,
+      parseCode,
+      northLat,
+      latSquareSize,
+      westLng,
+      lngSquareSize,
+      createJstsPolygon,
+    ]
   );
-
   const showGrid = useCallback(() => {
     if (!map || !TextOverlay) return;
 
