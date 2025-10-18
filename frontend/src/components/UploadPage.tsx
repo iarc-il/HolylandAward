@@ -15,9 +15,11 @@ import useAdifUpload from "@/hooks/useFileUpload";
 
 const FileUploader = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { mutate: uploadFile } = useAdifUpload();
+  const { mutate: uploadFile, reset } = useAdifUpload();
 
   const handleClick = () => {
+    // Reset mutation state before allowing new upload
+    reset();
     // Check if the ref has a current value and then simulate a click
     fileInputRef.current?.click();
   };
@@ -27,8 +29,10 @@ const FileUploader = () => {
     const files = event.target.files;
     if (files) {
       const file = files[0]; // Assuming single file upload
-      uploadFile({ file, spotter: "4Z1KD" });
+      uploadFile({ file });
     }
+    // Reset the input value to allow uploading the same file again
+    event.target.value = "";
   };
 
   return (

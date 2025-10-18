@@ -94,10 +94,21 @@ def get_all_areas(
 
 @app.post("/read-file")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
-    spotter_callsign: str = "4Z5SL",
     db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
 ):
+    # Get user from database to retrieve callsign
+    user = get_user_by_clerk_id(db, user_id)
+    if not user or not user.callsign:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User callsign not found. Please update your profile first.",
+        )
+
+    spotter_callsign = user.callsign
+
     contents = await file.read()
     with open(f"temp_{file.filename}", "wb") as f:
         f.write(contents)
