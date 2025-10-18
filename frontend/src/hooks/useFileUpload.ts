@@ -3,15 +3,16 @@ import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api";
 
 type QSO = {
+  id?: number;
   date: string;
   freq: number;
-  spotter: string;
   dx: string;
   area: string;
 };
 
 type UploadResponse = {
-  message: string;
+  total_qsos: number;
+  callsign: string;
   qsos: QSO[];
 };
 

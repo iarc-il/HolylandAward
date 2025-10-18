@@ -133,7 +133,22 @@ async def upload_file(
     saved_qsos = insert_qsos(db, qso_objects)
 
     os.remove(f"temp_{file.filename}")
-    return {"message": f"Processed {len(saved_qsos)} QSO entries", "qsos": saved_qsos}
+
+    # Return organized response with QSO data
+    return {
+        "total_qsos": len(saved_qsos),
+        "callsign": spotter_callsign,
+        "qsos": [
+            {
+                "id": qso.id,
+                "date": qso.date,
+                "freq": qso.freq,
+                "dx": qso.dx,
+                "area": qso.area,
+            }
+            for qso in saved_qsos
+        ],
+    }
 
 
 def main():
