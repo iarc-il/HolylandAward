@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import UserDetailsDialog from "./UserDetailsDialog";
-import AreasRegionsDialog from "./AreasRegionsDialog";
-import { useUserAreasAndRegions } from "../api/useUserAreasAndRegions";
-import { useProfile } from "../api/useProfile";
+import UserDetailsDialog from "../UserDetailsDialog";
+import AreasRegionsDialog from "../AreasRegionsDialog";
+import Map from "../Map";
+import ProgressBar from "./components/ProgressBar";
+import { useUserAreasAndRegions } from "../../api/useUserAreasAndRegions";
+import { useProfile } from "../../api/useProfile";
 
 // Get required areas and regions based on user's region
 const getRequiredAmounts = (region?: number) => {
@@ -88,20 +90,10 @@ const Dashboard = () => {
                   {requiredAmounts.areas}
                 </span>
               </div>
-              {/* Progress bar */}
-              <div className="w-full bg-secondary rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min(
-                      ((userAreasData?.total_areas ?? 0) /
-                        requiredAmounts.areas) *
-                        100,
-                      100
-                    )}%`,
-                  }}
-                ></div>
-              </div>
+              <ProgressBar
+                current={userAreasData?.total_areas ?? 0}
+                total={requiredAmounts.areas}
+              />
             </div>
           )}
           {!areasLoading && !areasError && (
@@ -132,20 +124,10 @@ const Dashboard = () => {
                   {requiredAmounts.regions}
                 </span>
               </div>
-              {/* Progress bar */}
-              <div className="w-full bg-secondary rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min(
-                      ((userAreasData?.total_regions ?? 0) /
-                        requiredAmounts.regions) *
-                        100,
-                      100
-                    )}%`,
-                  }}
-                ></div>
-              </div>
+              <ProgressBar
+                current={userAreasData?.total_regions ?? 0}
+                total={requiredAmounts.regions}
+              />
             </div>
           )}
           {!areasLoading && !areasError && (
@@ -163,6 +145,15 @@ const Dashboard = () => {
               ? "N/A"
               : userAreasData?.callsign ?? "Not Set"}
           </p>
+        </div>
+      </div>
+
+      {/* Map Section */}
+      <div className="mt-8">
+        <div className="border rounded-lg overflow-hidden">
+          <div className="h-[600px]">
+            <Map />
+          </div>
         </div>
       </div>
 
