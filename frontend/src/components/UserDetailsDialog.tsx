@@ -29,7 +29,7 @@ const userDetailsSchema = z
       .max(10, "Callsign too long")
       .regex(/^[A-Z0-9]+$/, "Callsign must contain only letters and numbers"),
     callsignConfirm: z.string().min(1, "Please confirm your callsign"),
-    region: z.enum(["1", "2", "3"], { message: "Please select a region" }),
+    region: z.enum(["0", "1", "2", "3"], { message: "Please select a region" }),
   })
   .refine((data) => data.callsign === data.callsignConfirm, {
     message: "Callsigns don't match",
@@ -130,13 +130,14 @@ const UserDetailsDialog = ({
               <div className="col-span-3">
                 <Select
                   onValueChange={(value) =>
-                    setValue("region", value as "1" | "2" | "3")
+                    setValue("region", value as "0" | "1" | "2" | "3")
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select region" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="0">Israel</SelectItem>
                     <SelectItem value="1">Region 1</SelectItem>
                     <SelectItem value="2">Region 2</SelectItem>
                     <SelectItem value="3">Region 3</SelectItem>

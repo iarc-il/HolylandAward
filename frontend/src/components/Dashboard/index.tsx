@@ -11,11 +11,13 @@ import { useProfile } from "../../api/useProfile";
 // Get required areas and regions based on user's region
 const getRequiredAmounts = (region?: number) => {
   switch (region) {
-    case 1:
+    case 0: // Israel
       return { areas: 150, regions: 18 };
-    case 2:
+    case 1: // Region 1
       return { areas: 100, regions: 13 };
-    case 3:
+    case 2: // Region 2
+      return { areas: 50, regions: 13 };
+    case 3: // Region 3
       return { areas: 50, regions: 13 };
     default:
       return { areas: 0, regions: 0 };
