@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import UserDetailsDialog from "../UserDetailsDialog";
 import AreasRegionsDialog from "../AreasRegionsDialog";
 import Map from "../Map";
-import ProgressBar from "./components/ProgressBar";
+import StatsCard from "./components/StatsCard";
 import { useUserAreasAndRegions } from "../../api/useUserAreasAndRegions";
 import { useProfile } from "../../api/useProfile";
 
@@ -62,96 +62,52 @@ const Dashboard = () => {
 
   return (
     <div className="flex flex-col space-y-4">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      <p className="text-muted-foreground">
-        Welcome to the HolyLand Award management system.
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div
-          className="p-6 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() =>
-            !areasLoading && !areasError && setAreasDialogOpen(true)
-          }
-        >
-          <h3 className="font-semibold mb-2">Areas</h3>
-          {areasLoading ? (
-            <p className="text-2xl font-bold">...</p>
-          ) : areasError ? (
-            <p className="text-2xl font-bold text-destructive">N/A</p>
-          ) : (
-            <div className="space-y-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-primary">
-                  {userAreasData?.total_areas ?? 0}
-                </span>
-                <span className="text-lg text-muted-foreground">/</span>
-                <span className="text-lg font-semibold text-muted-foreground">
-                  {requiredAmounts.areas}
-                </span>
-              </div>
-              <ProgressBar
-                current={userAreasData?.total_areas ?? 0}
-                total={requiredAmounts.areas}
-              />
-            </div>
-          )}
-          {!areasLoading && !areasError && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Click to view areas
-            </p>
-          )}
-        </div>
-        <div
-          className="p-6 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() =>
-            !areasLoading && !areasError && setRegionsDialogOpen(true)
-          }
-        >
-          <h3 className="font-semibold mb-2">Regions</h3>
-          {areasLoading ? (
-            <p className="text-2xl font-bold">...</p>
-          ) : areasError ? (
-            <p className="text-2xl font-bold text-destructive">N/A</p>
-          ) : (
-            <div className="space-y-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-primary">
-                  {userAreasData?.total_regions ?? 0}
-                </span>
-                <span className="text-lg text-muted-foreground">/</span>
-                <span className="text-lg font-semibold text-muted-foreground">
-                  {requiredAmounts.regions}
-                </span>
-              </div>
-              <ProgressBar
-                current={userAreasData?.total_regions ?? 0}
-                total={requiredAmounts.regions}
-              />
-            </div>
-          )}
-          {!areasLoading && !areasError && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Click to view regions
-            </p>
-          )}
-        </div>
-        <div className="p-6 border rounded-lg">
-          <h3 className="font-semibold">Callsign</h3>
-          <p className="text-2xl font-bold">
-            {areasLoading
-              ? "..."
-              : areasError
-              ? "N/A"
-              : userAreasData?.callsign ?? "Not Set"}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Welcome to the HolyLand Award management system.
+        </p>
       </div>
 
-      {/* Map Section */}
-      <div className="mt-8">
-        <div className="border rounded-lg overflow-hidden">
-          <div className="h-[600px]">
+      {/* Main Content Layout */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Side - Statistics Cards */}
+        <div className="flex-shrink-0 lg:w-80">
+          <div className="space-y-4">
+            <StatsCard
+              title="Areas"
+              current={userAreasData?.total_areas ?? 0}
+              total={requiredAmounts.areas}
+              isLoading={areasLoading}
+              isError={!!areasError}
+              onClick={() => setAreasDialogOpen(true)}
+            />
+
+            <StatsCard
+              title="Regions"
+              current={userAreasData?.total_regions ?? 0}
+              total={requiredAmounts.regions}
+              isLoading={areasLoading}
+              isError={!!areasError}
+              onClick={() => setRegionsDialogOpen(true)}
+            />
+
+            <div className="p-6 border rounded-lg">
+              <h3 className="font-semibold mb-2">Callsign</h3>
+              <p className="text-2xl font-bold">
+                {areasLoading
+                  ? "..."
+                  : areasError
+                  ? "N/A"
+                  : userAreasData?.callsign ?? "Not Set"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Map Section */}
+        <div className="flex-1">
+          <div className="border rounded-lg overflow-hidden h-[800px]">
             <Map />
           </div>
         </div>
