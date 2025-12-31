@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,8 +20,10 @@ import {
   Settings,
   Trophy,
   LogOut,
+  Mail,
 } from "lucide-react";
 import { SignOutButton } from "@clerk/clerk-react";
+import ContactDialog from "./ContactDialog";
 
 // Menu items for the sidebar
 const items = [
@@ -35,21 +38,6 @@ const items = [
     icon: Upload,
   },
   {
-    title: "Map",
-    url: "/map",
-    icon: Map,
-  },
-  {
-    title: "QSO Logs",
-    url: "/logs",
-    icon: FileText,
-  },
-  {
-    title: "Awards",
-    url: "/awards",
-    icon: Trophy,
-  },
-  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -57,6 +45,8 @@ const items = [
 ];
 
 const AppSidebar = () => {
+  const [showContactDialog, setShowContactDialog] = useState(false);
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -79,6 +69,12 @@ const AppSidebar = () => {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => setShowContactDialog(true)}>
+                  <Mail />
+                  <span>Contact Us</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -89,7 +85,6 @@ const AppSidebar = () => {
         </div>
         <div className="px-4 py-2">
           <SignOutButton>
-            {/* <Button variant="outline">Sign Out</Button> */}
             <SidebarMenuButton>
               <LogOut />
               <span>Sign Out</span>
@@ -97,6 +92,11 @@ const AppSidebar = () => {
           </SignOutButton>
         </div>
       </SidebarFooter>
+
+      <ContactDialog
+        isOpen={showContactDialog}
+        onClose={() => setShowContactDialog(false)}
+      />
     </Sidebar>
   );
 };

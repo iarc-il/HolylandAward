@@ -61,9 +61,6 @@ const App = () => {
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/upload" element={<UploadPage />} />
-                    <Route path="/map" element={<Map />} />
-                    <Route path="/logs" element={<LogsPage />} />
-                    <Route path="/awards" element={<AwardsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                   </Routes>
                 </div>
