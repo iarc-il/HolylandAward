@@ -62,9 +62,9 @@ def update_user_profile(
     db: Session, clerk_user_id: str, callsign: str, region: int
 ) -> Optional[Users]:
     """Update user's callsign and region"""
-    # Validate region
-    if region not in [1, 2, 3]:
-        raise ValueError("Region must be 1, 2, or 3")
+    # Validate region (0 = Israel, 1-3 = IARU regions)
+    if region not in [0, 1, 2, 3]:
+        raise ValueError("Region must be 0 (Israel), 1, 2, or 3")
 
     # Check if callsign is already taken
     existing_user = get_user_by_callsign(db, callsign)

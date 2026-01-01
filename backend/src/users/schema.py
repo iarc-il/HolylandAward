@@ -4,7 +4,7 @@ from typing import Optional
 
 class UserProfileUpdateRequest(BaseModel):
     callsign: str
-    region: int = Field(gt=0, lt=4)  # Region must be 1, 2, or 3
+    region: int = Field(ge=0, lt=4)  # Region must be 0 (Israel), 1, 2, or 3
 
 
 class UserResponse(BaseModel):

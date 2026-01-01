@@ -69,6 +69,9 @@ export const useProfile = () => {
   const [cachedProfile, setCachedProfile] =
     useSafeLocalStorage<CachedProfile | null>(cacheKey, null);
 
+  // Check if cached profile is complete
+  const isCacheComplete = cachedProfile?.callsign && cachedProfile?.region;
+
   // Query for fetching profile
   const profileQuery = useQuery({
     queryKey: ["user", "profile"],
@@ -89,7 +92,7 @@ export const useProfile = () => {
 
       return profile;
     },
-    enabled: isSignedIn && !cachedProfile, // Only fetch if signed in AND no cached data
+    enabled: isSignedIn && !isCacheComplete, // Fetch if signed in AND cache is missing or incomplete
     retry: 1, // Only retry once on failure
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
@@ -148,7 +151,7 @@ export const useProfile = () => {
   return {
     // Profile query data and states (use combined profile)
     profile: combinedProfile,
-    isLoading: !cachedProfile && profileQuery.isLoading,
+    isLoading: !isCacheComplete && profileQuery.isLoading,
     error: profileQuery.error,
     isError: profileQuery.isError,
 
@@ -161,7 +164,7 @@ export const useProfile = () => {
 
     // Combined loading state
     isAnyLoading:
-      (!cachedProfile && profileQuery.isLoading) || updateMutation.isPending,
+      (!isCacheComplete && profileQuery.isLoading) || updateMutation.isPending,
 
     // Refetch function
     refetch: profileQuery.refetch,

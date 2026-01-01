@@ -29,8 +29,9 @@ const Dashboard = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [areasDialogOpen, setAreasDialogOpen] = useState(false);
   const [regionsDialogOpen, setRegionsDialogOpen] = useState(false);
+  const [allowClose, setAllowClose] = useState(false);
 
-  const { profile } = useProfile();
+  const { profile, isProfileComplete, isLoading } = useProfile();
   const {
     data: userAreasData,
     isLoading: areasLoading,
@@ -47,8 +48,26 @@ const Dashboard = () => {
     }
   }, [searchParams]);
 
+  // Automatically prompt user to complete profile if incomplete
+  useEffect(() => {
+    // Wait for profile to load, then check if it's complete
+    if (!isLoading && !isProfileComplete) {
+      setIsDialogOpen(true);
+    }
+  }, [isLoading, isProfileComplete]);
+
   const handleDialogClose = () => {
+    // Only allow closing if profile is complete or explicitly allowed
+    if (!isProfileComplete && !allowClose) {
+      toast.warning("Profile Required", {
+        description: "Please complete your profile to continue.",
+        duration: 3000,
+      });
+      return;
+    }
+
     setIsDialogOpen(false);
+    setAllowClose(false); // Reset the flag
     // Remove profile-related params from URL when closing
     const newParams = new URLSearchParams(searchParams);
     newParams.delete("setup");
@@ -56,6 +75,7 @@ const Dashboard = () => {
   };
 
   const handleUserDetailsSuccess = () => {
+    setAllowClose(true); // Allow the dialog to close
     toast.success("Profile updated successfully!", {
       description: "Your callsign and region have been saved.",
       duration: 4000,

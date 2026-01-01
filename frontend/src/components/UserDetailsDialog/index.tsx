@@ -24,8 +24,19 @@ const userDetailsSchema = z
       .string()
       .min(1, "Callsign is required")
       .max(10, "Callsign too long")
-      .regex(/^[A-Z0-9]+$/, "Callsign must contain only letters and numbers"),
-    callsignConfirm: z.string().min(1, "Please confirm your callsign"),
+      .transform((val) => val.toUpperCase())
+      .pipe(
+        z
+          .string()
+          .regex(
+            /^[A-Z0-9]+$/,
+            "Callsign must contain only letters and numbers"
+          )
+      ),
+    callsignConfirm: z
+      .string()
+      .min(1, "Please confirm your callsign")
+      .transform((val) => val.toUpperCase()),
     region: z.enum(["0", "1", "2", "3"], { message: "Please select a region" }),
     acceptedRules: z.boolean().refine((val) => val === true, {
       message: "You must read and accept the award rules and guidelines",
