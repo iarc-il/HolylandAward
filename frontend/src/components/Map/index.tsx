@@ -464,6 +464,7 @@ const Map: React.FC = () => {
         apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
         version: "weekly",
         libraries: ["places", "geometry"],
+        language: "en",
       });
 
       try {
