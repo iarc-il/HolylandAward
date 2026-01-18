@@ -222,6 +222,27 @@ uv run alembic downgrade <revision_id>
 uv run alembic history
 ```
 
+### Resetting the Database
+
+If you need to start fresh with a clean database:
+
+```bash
+cd backend
+
+# Option 1: Drop and recreate using psql
+psql -h localhost -p 5432 -d postgres -U your_username -c "DROP DATABASE IF EXISTS holyland_award"
+psql -h localhost -p 5432 -d postgres -U your_username -c "CREATE DATABASE holyland_award"
+
+# Option 2: Using createdb/dropdb commands (easier)
+dropdb holyland_award
+createdb holyland_award
+
+# Then run migrations to recreate all tables
+uv run alembic upgrade head
+```
+
+**Note:** Adjust the port number (`5432` or `5433`) and username based on your PostgreSQL configuration.
+
 ## Development Tips
 
 ### Backend Development
