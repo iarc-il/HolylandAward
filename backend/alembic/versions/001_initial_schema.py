@@ -1,10 +1,11 @@
 """Initial schema with qso_logs and users tables
 
 Revision ID: 001_initial_schema
-Revises: 
+Revises:
 Create Date: 2026-01-19 00:00:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -94,7 +95,7 @@ def downgrade() -> None:
     """Downgrade schema."""
     # Drop foreign key
     op.drop_constraint("qso_logs_spotter_fkey", "qso_logs", type_="foreignkey")
-    
+
     # Drop users table
     op.drop_index(op.f("ix_users_id"), table_name="users")
     op.drop_index(op.f("ix_users_callsign"), table_name="users")
@@ -102,7 +103,7 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_users_email"), table_name="users")
     op.drop_index(op.f("ix_users_clerk_user_id"), table_name="users")
     op.drop_table("users")
-    
+
     # Drop qso_logs table
     op.drop_index(op.f("ix_qso_logs_spotter"), table_name="qso_logs")
     op.drop_index(op.f("ix_qso_logs_id"), table_name="qso_logs")

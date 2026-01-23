@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: holyland_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-holyland_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-holyland_password}
+      POSTGRES_DB: ${POSTGRES_DB:-holyland_award}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-holyland_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - holyland_network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: holyland_backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-holyland_user}:${POSTGRES_PASSWORD:-holyland_password}@db:5432/${POSTGRES_DB:-holyland_award}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - holyland_network
+    restart: unless-stopped
+
+  # Frontend (Development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: holyland_frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    networks:
+      - holyland_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  holyland_network:
+    driver: bridge
