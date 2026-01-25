@@ -10,11 +10,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-holyland_password}
       POSTGRES_DB: ${POSTGRES_DB:-holyland_award}
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-holyland_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-holyland_user} -d ${POSTGRES_DB:-holyland_award}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +32,7 @@ services:
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
     ports:
-      - "8000:8000"
+      - "1293:8000"
     volumes:
       - ./backend:/app
       - /app/__pycache__
@@ -56,6 +56,21 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app
+    depends_on:
+      - backend
+    networks:
+      - holyland_network
+    restart: unless-stopped
+
+  # Ngrok for Clerk webhooks
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: holyland_ngrok
+    command: http backend:8000 --domain=${NGROK_DOMAIN}
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTH_TOKEN}
+    ports:
+      - "4040:4040"
     depends_on:
       - backend
     networks:
