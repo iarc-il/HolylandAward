@@ -30,8 +30,8 @@ const userDetailsSchema = z
           .string()
           .regex(
             /^[A-Z0-9]+$/,
-            "Callsign must contain only letters and numbers"
-          )
+            "Callsign must contain only letters and numbers",
+          ),
       ),
     callsignConfirm: z
       .string()
@@ -82,9 +82,13 @@ const UserDetailsDialog = ({
         region: data.region,
       });
 
-      // Success! Close dialog and call success callback
-      onClose();
-      onSuccess?.();
+      // Success! Let the success callback handle closing
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        // Fallback if no success handler provided
+        onClose();
+      }
     } catch (error) {
       // Error is already handled by the mutation's onError
       console.error("Form submission error:", error);

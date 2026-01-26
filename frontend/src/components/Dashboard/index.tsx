@@ -75,11 +75,16 @@ const Dashboard = () => {
   };
 
   const handleUserDetailsSuccess = () => {
-    setAllowClose(true); // Allow the dialog to close
     toast.success("Profile updated successfully!", {
       description: "Your callsign and region have been saved.",
       duration: 4000,
     });
+    setIsDialogOpen(false); // Close the dialog directly
+    setAllowClose(false); // Reset the flag
+    // Remove profile-related params from URL
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("setup");
+    setSearchParams(newParams);
   };
 
   return (
@@ -120,8 +125,8 @@ const Dashboard = () => {
                 {areasLoading
                   ? "..."
                   : areasError
-                  ? "N/A"
-                  : userAreasData?.callsign ?? "Not Set"}
+                    ? "N/A"
+                    : (userAreasData?.callsign ?? "Not Set")}
               </p>
             </div>
           </div>
