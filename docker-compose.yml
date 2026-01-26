@@ -63,19 +63,19 @@ services:
     restart: unless-stopped
 
   # Ngrok for Clerk webhooks
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: holyland_ngrok
-    command: http backend:8000 --domain=${NGROK_DOMAIN}
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTH_TOKEN}
-    ports:
-      - "4040:4040"
-    depends_on:
-      - backend
-    networks:
-      - holyland_network
-    restart: unless-stopped
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   container_name: holyland_ngrok
+  #   command: http backend:8000 --domain=${NGROK_DOMAIN}
+  #   environment:
+  #     NGROK_AUTHTOKEN: ${NGROK_AUTH_TOKEN}
+  #   ports:
+  #     - "4040:4040"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - holyland_network
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:

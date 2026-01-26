@@ -14,10 +14,11 @@ router = APIRouter(prefix="/user")
 async def get_user_callsign(
     db: Session = Depends(get_db), user_id: str = Depends(verify_clerk_session)
 ):
-    user = user_service.get_user_callsign(db, user_id)
-    if user:
-        return user
-    return {"error": "User not found"}, 404
+    # Auto-create user if doesn't exist
+    from utils import get_or_create_user_from_clerk
+
+    user = await get_or_create_user_from_clerk(db, user_id)
+    return {"callsign": user.callsign, "region": user.region}
 
 
 @router.get("/profile", response_model=UserResponse)
@@ -25,16 +26,12 @@ async def get_user_profile(
     db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
-    """Get current user's profile"""
+    """Get current user's profile (auto-creates user on first request)"""
     try:
-        from users.repository import get_user_by_clerk_id
+        from utils import get_or_create_user_from_clerk
 
-        user = get_user_by_clerk_id(db, user_id)
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
+        # Auto-create user if doesn't exist (replaces webhook pattern)
+        user = await get_or_create_user_from_clerk(db, user_id)
 
         return UserResponse.from_orm(user)
 
@@ -52,8 +49,13 @@ async def update_user_profile(
     db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
-    """Update user's callsign and region"""
+    """Update user's callsign and region (auto-creates user if needed)"""
     try:
+        # Ensure user exists before updating
+        from utils import get_or_create_user_from_clerk
+
+        await get_or_create_user_from_clerk(db, user_id)
+
         # Update user profile using the service function
         updated_user = user_service.update_user_profile(
             db=db,

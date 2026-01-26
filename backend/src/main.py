@@ -1,19 +1,14 @@
 import uvicorn
 import adif_io
 import os
-import json
 
 
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from contextlib import asynccontextmanager
+from fastapi.security import HTTPBearer
 from adif_service import AdifService
 from database import get_db
 from qsos.repository import insert_qsos, get_areas_by_spotter
 from qsos.schema import QSO
-from users import service as user_service
-from users.repository import get_user_by_clerk_id
-from users.schema import UserProfileUpdateRequest, UserResponse
 from users.router import router as users_router
 from qsos.router import router as qsos_router
 from sqlalchemy.orm import Session
@@ -41,38 +36,8 @@ app.include_router(qsos_router)
 
 bearer_scheme = HTTPBearer()
 
-
-@app.post("/clerk-webhook")
-async def handle_clerk_webhook(request: Request, db: Session = Depends(get_db)):
-    try:
-        # Get the raw request body and parse JSON
-        body = await request.body()
-        webhook_data = json.loads(body.decode())
-
-        # Log the webhook for debugging
-        print(f"Webhook received: {webhook_data.get('type')}")
-
-        # Handle different webhook types
-        webhook_type = webhook_data.get("type")
-
-        if webhook_type == "user.created":
-            # Create new user in our database using functional approach
-            user = user_service.handle_clerk_user_created(db, webhook_data)
-            print(f"Created user: {user.id} with Clerk ID: {user.clerk_user_id}")
-            return {"status": "success", "user_id": user.id}
-
-        # For other webhook types, just acknowledge
-        return {"status": "acknowledged", "type": webhook_type}
-
-    except json.JSONDecodeError as e:
-        print(f"JSON decode error: {e}")
-        raise HTTPException(status_code=400, detail="Invalid JSON in webhook body")
-    except ValueError as e:
-        print(f"Validation error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        print(f"Webhook error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+# Webhook endpoint removed - users are now auto-created on first authentication
+# See utils.py::get_or_create_user_from_clerk() for the new pattern
 
 
 @app.get("/")
@@ -82,11 +47,16 @@ def read_root():
 
 # get all areas of a spotter
 @app.get("/areas/{spotter_callsign}")
-def get_all_areas(
+async def get_all_areas(
     spotter_callsign: str,
     db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
+    # Auto-create user if doesn't exist
+    from utils import get_or_create_user_from_clerk
+
+    await get_or_create_user_from_clerk(db, user_id)
+
     print(f"user_id: {user_id}")
     areas = get_areas_by_spotter(db, spotter_callsign)
     return {"areas": areas}
@@ -99,9 +69,11 @@ async def upload_file(
     db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
-    # Get user from database to retrieve callsign
-    user = get_user_by_clerk_id(db, user_id)
-    if not user or not user.callsign:
+    # Get or create user from Clerk, then check for callsign
+    from utils import get_or_create_user_from_clerk
+
+    user = await get_or_create_user_from_clerk(db, user_id)
+    if not user.callsign:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User callsign not found. Please update your profile first.",
