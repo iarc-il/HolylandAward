@@ -25,7 +25,7 @@ interface CachedProfile {
 // Safe localStorage hook that doesn't break when userId is null
 function useSafeLocalStorage<T>(
   key: string,
-  initialValue: T
+  initialValue: T,
 ): [T, (value: T) => void] {
   const [storedValue, setStoredValue] = useState(() => {
     if (typeof window === "undefined" || !key || key.includes("null")) {
@@ -69,8 +69,12 @@ export const useProfile = () => {
   const [cachedProfile, setCachedProfile] =
     useSafeLocalStorage<CachedProfile | null>(cacheKey, null);
 
-  // Check if cached profile is complete
-  const isCacheComplete = cachedProfile?.callsign && cachedProfile?.region;
+  // Check if cached profile is complete (region can be 0, so check for null/undefined explicitly)
+  const isCacheComplete = !!(
+    cachedProfile?.callsign &&
+    cachedProfile?.region !== undefined &&
+    cachedProfile?.region !== null
+  );
 
   // Query for fetching profile
   const profileQuery = useQuery({
@@ -111,7 +115,7 @@ export const useProfile = () => {
         },
         {
           Authorization: `Bearer ${token}`,
-        }
+        },
       );
 
       return response.json();
@@ -171,8 +175,13 @@ export const useProfile = () => {
 
     // Profile completion helpers (use combined profile)
     hasCallsign: !!combinedProfile?.callsign,
-    hasRegion: !!combinedProfile?.region,
-    isProfileComplete: !!(combinedProfile?.callsign && combinedProfile?.region),
+    hasRegion:
+      combinedProfile?.region !== undefined && combinedProfile?.region !== null,
+    isProfileComplete: !!(
+      combinedProfile?.callsign &&
+      combinedProfile?.region !== undefined &&
+      combinedProfile?.region !== null
+    ),
 
     // Cache management
     hasCachedData: shouldUseCache && !!cachedProfile,
