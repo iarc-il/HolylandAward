@@ -30,6 +30,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      FRONTEND_URL: ${FRONTEND_URL}
     ports:
       - "8000:8000"
     depends_on:
@@ -44,6 +45,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
     container_name: holyland_frontend_prod
     ports:
       - "80:80"

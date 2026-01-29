@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-holyland_user}:${POSTGRES_PASSWORD:-holyland_password}@db:5432/${POSTGRES_DB:-holyland_award}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      FRONTEND_URL: ${FRONTEND_URL}
     ports:
       - "1293:8000"
     volumes:
@@ -50,8 +51,9 @@ services:
       dockerfile: Dockerfile.dev
     container_name: holyland_frontend
     environment:
-      VITE_API_URL: http://localhost:8000
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
       VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
     ports:
       - "5173:5173"
     volumes:
@@ -62,20 +64,7 @@ services:
       - holyland_network
     restart: unless-stopped
 
-  # Ngrok for Clerk webhooks
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   container_name: holyland_ngrok
-  #   command: http backend:8000 --domain=${NGROK_DOMAIN}
-  #   environment:
-  #     NGROK_AUTHTOKEN: ${NGROK_AUTH_TOKEN}
-  #   ports:
-  #     - "4040:4040"
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - holyland_network
-  #   restart: unless-stopped
+  
 
 volumes:
   postgres_data:
