@@ -21,14 +21,14 @@ const StatsCard = ({
 }: StatsCardProps) => {
   return (
     <div
-      className={`p-6 border rounded-lg transition-colors ${
+      className={`p-6 bg-card border border-border rounded-xl shadow-md transition-all duration-300 ${
         isClickable && !isLoading && !isError
-          ? "cursor-pointer hover:bg-muted/50"
+          ? "cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-primary/30"
           : ""
       }`}
       onClick={isClickable && !isLoading && !isError ? onClick : undefined}
     >
-      <h3 className="font-semibold mb-2">{title}</h3>
+      <h3 className="font-semibold mb-3 text-lg">{title}</h3>
       {isLoading ? (
         <p className="text-2xl font-bold">...</p>
       ) : isError ? (

@@ -88,10 +88,10 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col space-y-4">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
+    <div className="flex flex-col space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-4xl md:text-5xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground text-base">
           Welcome to the HolyLand Award management system.
         </p>
       </div>
@@ -119,9 +119,9 @@ const Dashboard = () => {
               onClick={() => setRegionsDialogOpen(true)}
             />
 
-            <div className="p-6 border rounded-lg">
-              <h3 className="font-semibold mb-2">Callsign</h3>
-              <p className="text-2xl font-bold">
+            <div className="p-6 bg-card border border-border rounded-xl shadow-md">
+              <h3 className="font-semibold mb-3 text-lg">Callsign</h3>
+              <p className="text-2xl font-bold text-primary">
                 {areasLoading
                   ? "..."
                   : areasError
@@ -134,7 +134,7 @@ const Dashboard = () => {
 
         {/* Right Side - Map Section */}
         <div className="flex-1">
-          <div className="border rounded-lg overflow-hidden h-[800px]">
+          <div className="border border-border rounded-xl overflow-hidden shadow-md h-[600px] lg:h-[800px]">
             <Map />
           </div>
         </div>

@@ -45,19 +45,22 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <SidebarProvider>
-          <div className="flex h-screen w-full">
+          <div className="flex h-screen w-full bg-background">
             <SignedOut>
-              <main className="flex-1 h-screen flex items-center justify-center">
-                <SignUp
-                  afterSignInUrl="/?setup=true"
-                  afterSignUpUrl="/?setup=true"
-                />
+              <main className="flex-1 h-screen flex items-center justify-center bg-secondary/30">
+                <div className="bg-card p-8 rounded-xl shadow-lg border border-border">
+                  <SignUp
+                    afterSignInUrl="/?setup=true"
+                    afterSignUpUrl="/?setup=true"
+                  />
+                </div>
               </main>
             </SignedOut>
             <SignedIn>
               <AppSidebar />
-              <main className="flex-1 h-screen">
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0 h-screen">
+              <main className="flex-1 h-screen overflow-auto">
+                <div className="flex flex-1 flex-col gap-6 p-6 md:p-8 h-full">
+                  <SidebarTrigger className="lg:hidden mb-2" />
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/upload" element={<UploadPage />} />

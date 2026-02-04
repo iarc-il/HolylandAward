@@ -612,10 +612,6 @@ const Map: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <h1 className="text-3xl font-bold mb-4">Holyland Contest Map</h1>
-      </div>
-
       <div className="flex-1">
         <div ref={mapRef} className="w-full h-full" />
       </div>

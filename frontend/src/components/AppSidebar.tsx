@@ -50,19 +50,20 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-4 py-2">
-          <h2 className="text-lg font-semibold">HolyLand Award</h2>
+        <div className="px-4 py-3">
+          <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
+          <p className="text-xs text-muted-foreground mt-1">Amateur Radio Contest</p>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sm font-semibold">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <a href={item.url} className="transition-all duration-200">
                       <item.icon />
                       <span>{item.title}</span>
                     </a>
@@ -70,7 +71,7 @@ const AppSidebar = () => {
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setShowContactDialog(true)}>
+                <SidebarMenuButton onClick={() => setShowContactDialog(true)} className="transition-all duration-200">
                   <Mail />
                   <span>Contact Us</span>
                 </SidebarMenuButton>
@@ -80,12 +81,12 @@ const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="px-4 py-2 text-sm text-muted-foreground">
+        <div className="px-4 py-2 text-sm text-muted-foreground border-t border-sidebar-border pt-3">
           Amateur Radio Contest Management
         </div>
         <div className="px-4 py-2">
           <SignOutButton>
-            <SidebarMenuButton>
+            <SidebarMenuButton className="w-full transition-all duration-200">
               <LogOut />
               <span>Sign Out</span>
             </SidebarMenuButton>
