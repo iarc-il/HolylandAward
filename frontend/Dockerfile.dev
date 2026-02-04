@@ -6,9 +6,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Install dependencies during build
+RUN npm install
+
 EXPOSE 5173
 
 # Start development server
-# If node_modules exists (mounted from host), use it
-# Otherwise, install dependencies in container
-CMD sh -c "if [ ! -d node_modules ]; then npm install; fi && npm run dev -- --host 0.0.0.0"
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
