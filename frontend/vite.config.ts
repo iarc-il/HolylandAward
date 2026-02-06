@@ -12,4 +12,11 @@ export default defineConfig({
       "@ui": path.resolve(__dirname, "./src/components/ui"),
     },
   },
+  server: {
+    host: true, // Listen on all addresses
+    port: 5173,
+    watch: {
+      usePolling: true, // Required for Docker on Windows/WSL
+    },
+  },
 })
