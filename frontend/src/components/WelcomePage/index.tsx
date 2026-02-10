@@ -73,9 +73,10 @@ const WelcomePage = () => {
             </p>
           </div>
           <div className="p-6 bg-white/70 dark:bg-gray-800/70 rounded-lg">
-            <h3 className="font-semibold text-lg mb-2">Earn Awards</h3>
+            <h3 className="font-semibold text-lg mb-2">Claim Certificate</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Complete challenges and receive official recognition
+              Completed your region's requirements? Claim your Holyland Award
+              certificate!
             </p>
           </div>
         </div>
