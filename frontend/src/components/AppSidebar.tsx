@@ -50,7 +50,7 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-4 py-3">
+        <div className="px-2 py-3">
           <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
           <p className="text-xs text-muted-foreground mt-1">Amateur Radio Contest</p>
         </div>
