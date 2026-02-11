@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import {
   Sidebar,
   SidebarContent,
@@ -38,6 +39,11 @@ const items = [
     icon: Upload,
   },
   {
+    title: "Rules",
+    url: "/rules",
+    icon: FileText,
+  },
+  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -63,10 +69,10 @@ const AppSidebar = () => {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="transition-all duration-200">
+                    <Link to={item.url} className="transition-all duration-200">
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

@@ -11,6 +11,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/sonner";
 import WelcomePage from "./components/WelcomePage";
+import RulesPage from "./components/RulesPage";
 
 // Page components
 
@@ -58,6 +59,7 @@ const App = () => {
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/upload" element={<UploadPage />} />
+                    <Route path="/rules" element={<RulesPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                   </Routes>
                 </div>
