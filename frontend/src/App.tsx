@@ -8,8 +8,9 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import UploadPage from "./components/UploadPage";
 import Map from "./components/Map";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { SignedIn, SignedOut, SignUp } from "@clerk/clerk-react";
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/sonner";
+import WelcomePage from "./components/WelcomePage";
 
 // Page components
 
@@ -47,14 +48,7 @@ const App = () => {
         <SidebarProvider>
           <div className="flex h-screen w-full bg-background">
             <SignedOut>
-              <main className="flex-1 h-screen flex items-center justify-center bg-secondary/30">
-                <div className="bg-card p-8 rounded-xl shadow-lg border border-border">
-                  <SignUp
-                    afterSignInUrl="/?setup=true"
-                    afterSignUpUrl="/?setup=true"
-                  />
-                </div>
-              </main>
+              <WelcomePage />
             </SignedOut>
             <SignedIn>
               <AppSidebar />

@@ -97,7 +97,7 @@ const Map: React.FC = () => {
       const latIndex = (lat - northLat) * (1 / latSquareSize);
       return parseInt(latIndex.toString());
     },
-    [latSquareSize]
+    [latSquareSize],
   );
 
   const getLngIndex = useCallback(
@@ -105,7 +105,7 @@ const Map: React.FC = () => {
       const lngIndex = (lng - westLng) * (1 / lngSquareSize);
       return parseInt(lngIndex.toString());
     },
-    [lngSquareSize]
+    [lngSquareSize],
   );
 
   const getSquareByLatLng = useCallback(
@@ -121,7 +121,7 @@ const Map: React.FC = () => {
       const square = lngChar + latProjection.toString().padStart(2, "0");
       return square;
     },
-    [getLatIndex, getLngIndex]
+    [getLatIndex, getLngIndex],
   );
 
   const clearMap = useCallback(() => {
@@ -167,7 +167,7 @@ const Map: React.FC = () => {
 
     // Find suffix in the area list by name
     const matchedArea = areas.find(
-      (area) => area.name.toUpperCase() === suffix.toUpperCase()
+      (area) => area.name.toUpperCase() === suffix.toUpperCase(),
     );
     if (!matchedArea) {
       throw new Error("Suffix not found in area list");
@@ -184,13 +184,13 @@ const Map: React.FC = () => {
         .getArray()
         .map(
           (coord: any) =>
-            new (window as any).jsts.geom.Coordinate(coord.lat(), coord.lng())
+            new (window as any).jsts.geom.Coordinate(coord.lng(), coord.lat()),
         );
       coordinates.push(coordinates[0]); // Close the polygon
       const shell = geometryFactory.createLinearRing(coordinates);
       return geometryFactory.createPolygon(shell);
     },
-    []
+    [],
   );
 
   // Paint square by code - with proper JSTS polygon intersection
@@ -242,19 +242,25 @@ const Map: React.FC = () => {
 
         // Calculate polygons intersection using JSTS - exactly like original HTML
         const geometryFactory = new (window as any).jsts.geom.GeometryFactory();
-        const jstsSquarePolygon = createJstsPolygon(
+        let jstsSquarePolygon = createJstsPolygon(
           geometryFactory,
-          squarePolygon
+          squarePolygon,
         );
-        const jstsRegionPolygon = createJstsPolygon(
+        let jstsRegionPolygon = createJstsPolygon(
           geometryFactory,
-          regionPolygon
+          regionPolygon,
         );
+
+        // Fix any topology issues by buffering with 0 distance
+        // This is a standard technique to clean up invalid geometries
+        jstsSquarePolygon = jstsSquarePolygon.buffer(0);
+        jstsRegionPolygon = jstsRegionPolygon.buffer(0);
+
         const intersection = jstsSquarePolygon.intersection(jstsRegionPolygon);
 
         // Convert intersection coordinates back to Google Maps format
         const coords = intersection.getCoordinates().map((coord: any) => {
-          return { lat: coord.x, lng: coord.y };
+          return { lat: coord.y, lng: coord.x };
         });
 
         // Only draw if there's an actual intersection
@@ -291,7 +297,7 @@ const Map: React.FC = () => {
       westLng,
       lngSquareSize,
       createJstsPolygon,
-    ]
+    ],
   );
   const showGrid = useCallback(() => {
     if (!map || !TextOverlay) return;
@@ -364,7 +370,7 @@ const Map: React.FC = () => {
         const squareLabel = getSquareByLatLng(position.lat, position.lng);
         const overlay = new TextOverlay(
           new (window as any).google.maps.LatLng(position.lat, position.lng),
-          squareLabel
+          squareLabel,
         );
 
         // Apply styling similar to original
@@ -396,9 +402,9 @@ const Map: React.FC = () => {
         const areaOverlay = new TextOverlay(
           new (window as any).google.maps.LatLng(
             area.center.lat,
-            area.center.lng
+            area.center.lng,
           ),
-          area.name
+          area.name,
         );
 
         // Apply area label styling
@@ -479,7 +485,7 @@ const Map: React.FC = () => {
               center: { lat: 31.5, lng: 35.0 }, // Center of Israel
               zoom: 8,
               mapTypeId: (window as any).google.maps.MapTypeId.ROADMAP,
-            }
+            },
           );
           setMap(mapInstance);
         }
@@ -530,9 +536,9 @@ const Map: React.FC = () => {
       const overlay = new TextOverlay(
         new (window as any).google.maps.LatLng(
           area.center.lat,
-          area.center.lng
+          area.center.lng,
         ),
-        area.name
+        area.name,
       );
       overlay.setMap(map);
       overlaysRef.current = [...overlaysRef.current, overlay];
@@ -548,7 +554,7 @@ const Map: React.FC = () => {
     const newGridOverlays: unknown[] = []; // google.maps.Polygon[] when loaded
 
     const workedSquares = new Set(
-      qsoData.map((qso: { area: string }) => qso.area.substring(0, 3))
+      qsoData.map((qso: { area: string }) => qso.area.substring(0, 3)),
     ); // Extract square part
 
     // Generate all possible squares in Israel area
@@ -579,7 +585,7 @@ const Map: React.FC = () => {
           // Add square label
           const overlay = new TextOverlay(
             new (window as any).google.maps.LatLng(lat + 1 / 48, lng + 1 / 24),
-            square
+            square,
           );
           overlay.setMap(map);
           overlaysRef.current = [...overlaysRef.current, overlay];
