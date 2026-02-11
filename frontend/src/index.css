@@ -250,3 +250,18 @@
     padding: 3rem 0; /* 48px section spacing on larger screens */
   }
 }
+
+/* Floating animation for certificate */
+@keyframes float {
+  0%, 100% {
+    transform: rotateY(-3deg);
+  }
+  50% {
+    transform: rotateY(3deg);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+  transform-style: preserve-3d;
+}

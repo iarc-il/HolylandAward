@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { SignIn } from "@clerk/clerk-react";
 import { useState } from "react";
+import awardCert from "@/assets/award_comp.png";
+import logo from "@/assets/logo.svg";
 
 const WelcomePage = () => {
   const [showSignIn, setShowSignIn] = useState(false);
@@ -16,65 +18,72 @@ const WelcomePage = () => {
   }
 
   return (
-    <div className="flex-1 h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-4xl mx-auto px-6 text-center space-y-8">
+    <div className="flex-1 h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-hidden">
+      <div className="max-w-4xl w-full mx-auto px-6 text-center flex flex-col h-full justify-center py-8">
+        {/* Logo */}
+        <div className="flex justify-center mb-4 flex-shrink-0">
+          <img src={logo} alt="Holyland Award Logo" className="h-16 w-auto" />
+        </div>
+        
         {/* Header */}
-        <div className="space-y-4">
-          <h1 className="text-6xl font-bold text-gray-900 dark:text-white">
+        <div className="space-y-2 flex-shrink-0">
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white">
             Holyland Award
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300">
             Track your amateur radio achievements across the Holy Land
           </p>
         </div>
 
-        {/* Certificate Placeholder */}
-        <div className="my-12 p-12 bg-white/50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-          <div className="text-gray-400 dark:text-gray-500 space-y-4">
-            <div className="text-4xl">📜</div>
-            <p className="text-lg font-medium">Award Certificate</p>
-            <p className="text-sm">Coming soon with fancy animations!</p>
-          </div>
+        {/* Certificate Image */}
+        <div className="my-4 flex justify-center flex-1 min-h-0" style={{ perspective: '1000px' }}>
+          <img 
+            src={awardCert} 
+            alt="Holyland Award Certificate" 
+            className="w-full h-full object-contain max-w-2xl animate-float"
+            style={{ 
+              mixBlendMode: 'darken',
+              filter: 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15))'
+            }}
+          />
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center flex-shrink-0">
           <Button
             size="lg"
             onClick={() => setShowSignIn(true)}
-            className="px-8 py-6 text-lg"
-          >
+            className="px-6 md:px-8 py-4 md:py-6 text-base md:text-lg">
             Get Started
           </Button>
           <Button
             size="lg"
             variant="outline"
             onClick={() => setShowSignIn(true)}
-            className="px-8 py-6 text-lg"
-          >
+            className="px-6 md:px-8 py-4 md:py-6 text-base md:text-lg">
             Sign In
           </Button>
         </div>
 
         {/* Info Section */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-          <div className="p-6 bg-white/70 dark:bg-gray-800/70 rounded-lg">
-            <h3 className="font-semibold text-lg mb-2">Track Progress</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-left flex-shrink-0">
+          <div className="p-4 md:p-6 bg-card border border-border rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <h3 className="font-semibold text-base md:text-lg mb-2">Track Progress</h3>
+            <p className="text-xs md:text-sm text-muted-foreground">
               Monitor your QSO contacts across different regions and areas
             </p>
           </div>
-          <div className="p-6 bg-white/70 dark:bg-gray-800/70 rounded-lg">
-            <h3 className="font-semibold text-lg mb-2">
+          <div className="p-4 md:p-6 bg-card border border-border rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <h3 className="font-semibold text-base md:text-lg mb-2">
               Visualize Achievement
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs md:text-sm text-muted-foreground">
               See your covered areas on an interactive map
             </p>
           </div>
-          <div className="p-6 bg-white/70 dark:bg-gray-800/70 rounded-lg">
-            <h3 className="font-semibold text-lg mb-2">Claim Certificate</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="p-4 md:p-6 bg-card border border-border rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <h3 className="font-semibold text-base md:text-lg mb-2">Claim Certificate</h3>
+            <p className="text-xs md:text-sm text-muted-foreground">
               Completed your region's requirements? Claim your Holyland Award
               certificate!
             </p>
