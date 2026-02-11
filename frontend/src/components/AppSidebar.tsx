@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@clerk/clerk-react";
 import ContactDialog from "./ContactDialog";
+import logo from "@/assets/logo.svg";
 
 // Menu items for the sidebar
 const items = [
@@ -56,7 +57,8 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-2 py-3">
+        <div className="px-2 py-3 flex flex-col items-center gap-2">
+          <img src={logo} alt="Holyland Award Logo" className="h-12 w-auto" />
           <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
           <p className="text-xs text-muted-foreground mt-1">Amateur Radio Contest</p>
         </div>
