@@ -1,68 +1,41 @@
 const RulesPage = () => {
   return (
-    <div className="flex flex-col space-y-6 max-w-4xl">
+    <div className="flex flex-col space-y-6 max-w-4xl pb-16">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Contest Rules</h1>
+        <h1 className="text-3xl font-bold mb-2">Contest Information & Rules</h1>
         <p className="text-foreground">
-          Holyland Award Contest Rules and Guidelines
+          Holyland Award Contest Guidelines and Requirements
         </p>
       </div>
 
       <div className="p-6 bg-card border border-border rounded-xl shadow-md space-y-8">
-        {/* Section 1 */}
+        {/* Section 1 - Definition of a "Square" */}
         <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-foreground">1. Submission Specifications</h2>
-          <p className="text-foreground">
-            The submitted log file must contain the following information (Items A–G are required per Ministry of Communications regulations):
-          </p>
-          <ul className="space-y-2 ml-4">
-            <li className="text-foreground">
-              <span className="font-bold">A.</span> Call sign of the applicant.
-            </li>
-            <li className="text-foreground">
-              <span className="font-bold">B.</span> A numbered table (Contact Log) including the following details:
-              <ul className="ml-8 mt-2 space-y-1 list-decimal text-foreground">
-                <li>Call sign of the station contacted.</li>
-                <li>Date and time of the contact (UTC).</li>
-                <li>Frequency band.</li>
-                <li>Mode of emission (MODE).</li>
-                <li>Received signal report (RST).</li>
-                <li>Sent signal report (RST).</li>
-                <li>The <strong className="text-foreground">Holyland Square</strong> of the station contacted.</li>
-              </ul>
-            </li>
-          </ul>
-        </section>
-
-        <hr className="border-border" />
-
-        {/* Section 4 */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-foreground">4. Definition of a "Square"</h2>
+          <h2 className="text-2xl font-semibold text-foreground">Definition of a "Square"</h2>
           <ul className="space-y-2 ml-4">
             <li className="text-foreground">
               <span className="font-bold">A.</span> The State of Israel is geographically divided into a grid of geographic squares.
             </li>
             <li className="text-foreground">
-              <span className="font-bold">B.</span> Each geographic square measures 10 km by 10 km.
+              <span className="font-bold">B.</span> Each geographic square measures 10 km x 10 km.
             </li>
             <li className="text-foreground">
               <span className="font-bold">C.</span> West-to-East coordinates are designated by English letters (<strong>A–Q</strong>).
             </li>
             <li className="text-foreground">
-              <span className="font-bold">D.</span> North-to-South coordinates are designated by a two-digit sequence (<strong>00–43</strong>).
+              <span className="font-bold">D.</span> North-to-South coordinates are designated by a running two-digit sequence (<strong>00–43</strong>).
             </li>
             <li className="text-foreground">
               <span className="font-bold">E.</span> The combination of these two coordinates forms a geographic square (e.g., <strong>E-14</strong>).
             </li>
             <li className="text-foreground">
-              <span className="font-bold">F.</span> The State of Israel is further divided into 23 administrative districts.
+              <span className="font-bold">F.</span> Additionally, the State of Israel is divided into 23 administrative districts.
             </li>
             <li className="text-foreground">
               <span className="font-bold">G.</span> Each district is assigned a two-letter abbreviation.
             </li>
             <li className="text-foreground">
-              <span className="font-bold">H.</span> <strong>District Abbreviations:</strong> AZ, AS, BS, BL, HD, HG, HF, HS, HB, JN, JS, KT, PT, RA, RH, RM, SM, TA, TK, YN, YZ, ZF.
+              <span className="font-bold">H.</span> <strong>List of District Abbreviations:</strong> AZ, AS, BS, BL, HD, HG, HF, HS, HB, JN, JS, KT, PT, RA, RH, RM, SM, TA, TK, YN, YZ, ZF.
             </li>
             <li className="text-foreground">
               <span className="font-bold">I.</span> A full <strong>"SQUARE"</strong> is defined as the combination of the geographic square and the district abbreviation (e.g., <strong>H-08-HF</strong>).
@@ -75,46 +48,9 @@ const RulesPage = () => {
 
         <hr className="border-border" />
 
-        {/* Section 5 */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-foreground">5. Award Criteria</h2>
-          <ul className="space-y-3 ml-4">
-            <li className="text-foreground">
-              <span className="font-bold">A.</span> No mode restrictions.
-            </li>
-            <li className="text-foreground">
-              <span className="font-bold">B.</span> No frequency/band restrictions.
-            </li>
-            <li className="text-foreground">
-              <span className="font-bold">C.</span> Contacts made via repeaters or similar aids do not count toward the award.
-            </li>
-            <li className="text-foreground">
-              <span className="font-bold">D. Category A: Operators within the Holyland</span>
-              <ul className="ml-8 mt-2 space-y-1 list-disc text-foreground">
-                <li>Must work at least <strong className="text-foreground">150 Squares</strong> from at least <strong className="text-foreground">18 different districts</strong>.</li>
-                <li><strong className="text-foreground">Bonus:</strong> The square from which the applicant operates is automatically credited as a "worked" square.</li>
-              </ul>
-            </li>
-            <li className="text-foreground">
-              <span className="font-bold">E. Category B: Operators in IARU Region 1</span>
-              <ul className="ml-8 mt-2 space-y-1 list-disc text-foreground">
-                <li>Must work at least <strong className="text-foreground">100 Squares</strong> from at least <strong className="text-foreground">13 different districts</strong>.</li>
-              </ul>
-            </li>
-            <li className="text-foreground">
-              <span className="font-bold">F. Category C: Operators in IARU Regions 2 & 3</span>
-              <ul className="ml-8 mt-2 space-y-1 list-disc text-foreground">
-                <li>Must work at least <strong className="text-foreground">50 Squares</strong> from at least <strong className="text-foreground">13 different districts</strong>.</li>
-              </ul>
-            </li>
-          </ul>
-        </section>
-
-        <hr className="border-border" />
-
         {/* Section 2 - Squares by District */}
         <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-foreground">2. Squares by District</h2>
+          <h2 className="text-2xl font-semibold text-foreground">Squares by District</h2>
           <p className="text-foreground mb-4">
             Geographic squares organized by administrative district
           </p>
@@ -373,6 +309,43 @@ const RulesPage = () => {
               </p>
             </div>
           </div>
+        </section>
+
+        <hr className="border-border" />
+
+        {/* Section 3 - Award Categories & Criteria */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-foreground">Award Categories & Criteria</h2>
+          <ul className="space-y-3 ml-4">
+            <li className="text-foreground">
+              <span className="font-bold">A.</span> No mode restrictions.
+            </li>
+            <li className="text-foreground">
+              <span className="font-bold">B.</span> No frequency/band restrictions.
+            </li>
+            <li className="text-foreground">
+              <span className="font-bold">C.</span> Contacts made via terrestrial repeaters, etc., do not count toward the award.
+            </li>
+            <li className="text-foreground">
+              <span className="font-bold">D. Category A: Operators within the Holyland</span>
+              <ul className="ml-8 mt-2 space-y-1 list-disc text-foreground">
+                <li>Must work at least <strong className="text-foreground">150 Squares</strong> from at least <strong className="text-foreground">18 different districts</strong>.</li>
+                <li><strong className="text-foreground">Bonus:</strong> The square from which the applicant is operating counts as a "worked" square for the purpose of the award.</li>
+              </ul>
+            </li>
+            <li className="text-foreground">
+              <span className="font-bold">E. Category B: Operators in IARU Region 1</span>
+              <ul className="ml-8 mt-2 space-y-1 list-disc text-foreground">
+                <li>Must work at least <strong className="text-foreground">100 Squares</strong> from at least <strong className="text-foreground">13 different districts</strong>.</li>
+              </ul>
+            </li>
+            <li className="text-foreground">
+              <span className="font-bold">F. Category C: Operators in IARU Regions 2 & 3</span>
+              <ul className="ml-8 mt-2 space-y-1 list-disc text-foreground">
+                <li>Must work at least <strong className="text-foreground">50 Squares</strong> from at least <strong className="text-foreground">13 different districts</strong>.</li>
+              </ul>
+            </li>
+          </ul>
         </section>
       </div>
     </div>

@@ -40,7 +40,7 @@ const items = [
     icon: Upload,
   },
   {
-    title: "Rules",
+    title: "Contest Info",
     url: "/rules",
     icon: FileText,
   },
