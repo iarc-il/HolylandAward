@@ -9,7 +9,7 @@ const WelcomePage = () => {
 
   if (showSignIn) {
     return (
-      <div className="flex-1 h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="flex-1 h-screen flex items-center justify-center relative z-10">
         <div className="bg-card p-8 rounded-xl shadow-lg border border-border">
           <SignIn />
         </div>
@@ -18,7 +18,7 @@ const WelcomePage = () => {
   }
 
   return (
-    <div className="flex-1 h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-hidden">
+    <div className="flex-1 h-screen flex flex-col items-center justify-center overflow-hidden relative z-10">
       <div className="max-w-4xl w-full mx-auto px-6 text-center flex flex-col h-full justify-center py-8">
         {/* Logo */}
         <div className="flex justify-center mb-4 flex-shrink-0">

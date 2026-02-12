@@ -53,7 +53,7 @@
   /* Color Palette - Light Mode */
   --background: #FFFFFF; /* White background for main content */
   --foreground: #333333; /* Dark gray/black for body text */
-  --card: #FFFFFF; /* White cards */
+  --card: rgba(255, 255, 255, 0.95); /* White cards with slight transparency */
   --card-foreground: #333333;
   --popover: #FFFFFF;
   --popover-foreground: #333333;
@@ -96,7 +96,7 @@
   --chart-5: #FFFF00;
   
   /* Sidebar: Light background with blue accents */
-  --sidebar: #F8F9FA; /* Light gray sidebar */
+  --sidebar: rgba(248, 249, 250, 0.95); /* Light gray sidebar with transparency */
   --sidebar-foreground: #333333;
   --sidebar-primary: #3498DB; /* Active items in darker blue */
   --sidebar-primary-foreground: #FFFFFF;
