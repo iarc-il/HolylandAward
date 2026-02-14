@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { SignIn } from "@clerk/clerk-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import awardCert from "@/assets/award_comp.png";
 import logo from "@/assets/logo.svg";
 
 const WelcomePage = () => {
   const [showSignIn, setShowSignIn] = useState(false);
+  const navigate = useNavigate();
 
   if (showSignIn) {
     return (
@@ -52,9 +54,9 @@ const WelcomePage = () => {
         <div className="flex gap-4 justify-center flex-shrink-0">
           <Button
             size="lg"
-            onClick={() => setShowSignIn(true)}
+            onClick={() => navigate('/rules')}
             className="px-6 md:px-8 py-4 md:py-6 text-base md:text-lg">
-            Get Started
+            About & Rules
           </Button>
           <Button
             size="lg"

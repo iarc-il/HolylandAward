@@ -1,11 +1,28 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
+import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 const RulesPage = () => {
   const [language, setLanguage] = useState<"en" | "he">("en");
+  const navigate = useNavigate();
+  const { isSignedIn } = useAuth();
 
   return (
     <div className="flex flex-col space-y-6 max-w-4xl pb-16">
+      {/* Back button for non-authenticated users */}
+      {!isSignedIn && (
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="self-start -ml-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Button>
+      )}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Contest Information & Rules</h1>

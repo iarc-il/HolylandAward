@@ -62,7 +62,16 @@ const App = () => {
             <div className="absolute inset-0 bg-background/80 pointer-events-none" />
             
             <SignedOut>
-              <WelcomePage />
+              <Routes>
+                <Route path="/rules" element={
+                  <div className="flex-1 h-screen flex flex-col items-center overflow-auto relative z-10">
+                    <div className="max-w-4xl w-full mx-auto px-6 py-8">
+                      <RulesPage />
+                    </div>
+                  </div>
+                } />
+                <Route path="*" element={<WelcomePage />} />
+              </Routes>
             </SignedOut>
             <SignedIn>
               <div className="flex h-screen w-full relative z-10">
