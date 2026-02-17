@@ -102,7 +102,7 @@ const Dashboard = () => {
         <div className="flex-shrink-0 lg:w-80">
           <div className="space-y-4">
             <StatsCard
-              title="Areas"
+              title="Squares"
               current={userAreasData?.total_areas ?? 0}
               total={requiredAmounts.areas}
               isLoading={areasLoading}
@@ -151,7 +151,7 @@ const Dashboard = () => {
       <AreasRegionsDialog
         isOpen={areasDialogOpen}
         onClose={() => setAreasDialogOpen(false)}
-        title="Areas"
+        title="Squares"
         items={userAreasData?.areas ?? []}
         isLoading={areasLoading}
       />

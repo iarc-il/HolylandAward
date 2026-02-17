@@ -40,7 +40,7 @@ const items = [
     icon: Upload,
   },
   {
-    title: "Contest Info",
+    title: "Award Info",
     url: "/rules",
     icon: FileText,
   },
@@ -58,9 +58,9 @@ const AppSidebar = () => {
     <Sidebar>
       <SidebarHeader>
         <div className="px-2 py-3 flex flex-col items-center gap-2">
-          <img src={logo} alt="Holyland Award Logo" className="h-12 w-auto" />
+          <img src={logo} alt="Holyland Award Logo" className="h-20 w-auto" />
           <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
-          <p className="text-xs text-muted-foreground mt-1">Amateur Radio Contest</p>
+        
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -90,7 +90,7 @@ const AppSidebar = () => {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-4 py-2 text-sm text-muted-foreground border-t border-sidebar-border pt-3">
-          Amateur Radio Contest Management
+          Amateur Radio Award Management
         </div>
         <div className="px-4 py-2">
           <SignOutButton>

@@ -72,7 +72,7 @@ const WelcomePage = () => {
           <div className="p-4 md:p-6 bg-card border border-border rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
             <h3 className="font-semibold text-base md:text-lg mb-2">Track Progress</h3>
             <p className="text-xs md:text-sm text-muted-foreground">
-              Monitor your QSO contacts across different regions and areas
+              Monitor your QSO contacts across different regions and squares
             </p>
           </div>
           <div className="p-4 md:p-6 bg-card border border-border rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
@@ -80,7 +80,7 @@ const WelcomePage = () => {
               Visualize Achievement
             </h3>
             <p className="text-xs md:text-sm text-muted-foreground">
-              See your covered areas on an interactive map
+              See your covered squares on an interactive map
             </p>
           </div>
           <div className="p-4 md:p-6 bg-card border border-border rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300">

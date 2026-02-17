@@ -25,9 +25,9 @@ const RulesPage = () => {
       
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Contest Information & Rules</h1>
+          <h1 className="text-3xl font-bold mb-2">Award Information & Rules</h1>
           <p className="text-foreground">
-            Holyland Award Contest Guidelines and Requirements
+            Holyland Award Award Guidelines and Requirements
           </p>
         </div>
         
