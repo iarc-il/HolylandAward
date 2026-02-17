@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@clerk/clerk-react";
 import ContactDialog from "./ContactDialog";
+import logo from "@/assets/logo.svg";
 
 // Menu items for the sidebar
 const items = [
@@ -38,6 +40,11 @@ const items = [
     icon: Upload,
   },
   {
+    title: "Award Info",
+    url: "/rules",
+    icon: FileText,
+  },
+  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -50,9 +57,10 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-4 py-3">
+        <div className="px-2 py-3 flex flex-col items-center gap-2">
+          <img src={logo} alt="Holyland Award Logo" className="h-20 w-auto" />
           <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
-          <p className="text-xs text-muted-foreground mt-1">Amateur Radio Contest</p>
+        
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -63,10 +71,10 @@ const AppSidebar = () => {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="transition-all duration-200">
+                    <Link to={item.url} className="transition-all duration-200">
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -82,7 +90,7 @@ const AppSidebar = () => {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-4 py-2 text-sm text-muted-foreground border-t border-sidebar-border pt-3">
-          Amateur Radio Contest Management
+          Amateur Radio Award Management
         </div>
         <div className="px-4 py-2">
           <SignOutButton>

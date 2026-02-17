@@ -37,7 +37,7 @@ const RulesAndGuidlines: React.FC<RulesAndGuidlinesProps> = ({
 
             <p className="mb-3">
               The Holy Land Award is granted for establishing contacts with
-              stations located in different areas within the State of Israel
+              stations located in different squares within the State of Israel
               without any restrictions on the type of transmission or frequency
               bands.
             </p>
@@ -61,7 +61,7 @@ const RulesAndGuidlines: React.FC<RulesAndGuidlinesProps> = ({
                 </h5>
                 <p className="text-sm mt-1">
                   These stations must establish contact with at least{" "}
-                  <strong>150 areas</strong> in at least{" "}
+                  <strong>150 squares</strong> in at least{" "}
                   <strong>18 different districts</strong>.
                 </p>
               </div>
@@ -72,7 +72,7 @@ const RulesAndGuidlines: React.FC<RulesAndGuidlinesProps> = ({
                 </h5>
                 <p className="text-sm mt-1">
                   These stations must establish contact with at least{" "}
-                  <strong>100 areas</strong> in at least{" "}
+                  <strong>100 squares</strong> in at least{" "}
                   <strong>13 different districts</strong>.
                 </p>
               </div>
@@ -83,7 +83,7 @@ const RulesAndGuidlines: React.FC<RulesAndGuidlinesProps> = ({
                 </h5>
                 <p className="text-sm mt-1">
                   These stations must establish contact with{" "}
-                  <strong>50 different areas</strong> in at least{" "}
+                  <strong>50 different squares</strong> in at least{" "}
                   <strong>13 different districts</strong>.
                 </p>
               </div>
