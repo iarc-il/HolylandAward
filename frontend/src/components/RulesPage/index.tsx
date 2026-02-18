@@ -64,7 +64,7 @@ const EnglishContent = () => {
     <div className="p-6 bg-card border border-border rounded-xl shadow-md space-y-8">
       {/* Introductory Section */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold text-foreground text-center">THE HOLYLAND AWARD PROGRAM</h2>
+        <h2 className="text-2xl font-semibold text-foreground text-center">The Holyland Award Program</h2>
         <div className="space-y-4 text-foreground">
           <p>
             The Israel Amateur Radio Club congratulates you, and is very happy to have you among other Radio amateurs in the world, participating in the "Holyland Award" program since January 1992.
@@ -79,7 +79,7 @@ const EnglishContent = () => {
             We here, are making all efforts to increase the activity of radio amateurs in the country. We encourage mobile and portable operation, activate the "Holyland International DX contest" which became quickly, a well known and popular contest among Radio amateurs.
           </p>
           <p>
-            Finally, we wish you much success and pleasure in accumulating the Holyland
+            Finally, we wish you much success and pleasure in accumulating the Holyland Award
           </p>
         </div>
       </section>
