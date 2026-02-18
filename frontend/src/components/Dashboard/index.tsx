@@ -7,6 +7,7 @@ import Map from "../Map";
 import StatsCard from "./components/StatsCard";
 import { useUserAreasAndRegions } from "../../api/useUserAreasAndRegions";
 import { useProfile } from "../../api/useProfile";
+import { Trophy, Mail, Sparkles } from "lucide-react";
 
 // Get required areas and regions based on user's region
 const getRequiredAmounts = (region?: number) => {
@@ -39,6 +40,15 @@ const Dashboard = () => {
   } = useUserAreasAndRegions();
 
   const requiredAmounts = getRequiredAmounts(profile?.region);
+
+  // Check if all requirements are met
+  const areasComplete =
+    (userAreasData?.total_areas ?? 0) >= requiredAmounts.areas &&
+    requiredAmounts.areas > 0;
+  const regionsComplete =
+    (userAreasData?.total_regions ?? 0) >= requiredAmounts.regions &&
+    requiredAmounts.regions > 0;
+  const allRequirementsMet = areasComplete && regionsComplete;
 
   // Check if dialog should be open based on URL params
   useEffect(() => {
@@ -90,11 +100,51 @@ const Dashboard = () => {
   return (
     <div className="flex flex-col space-y-6">
       <div className="space-y-2">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+          Dashboard
+        </h1>
         <p className="text-muted-foreground text-base">
           Welcome to the HolyLand Award management system.
         </p>
       </div>
+
+      {/* Achievement Banner - Show when all requirements met */}
+      {allRequirementsMet && !areasLoading && (
+        <div className="relative overflow-hidden rounded-xl border-2 border-green-500 bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 p-6 shadow-lg animate-in fade-in slide-in-from-top duration-700">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-200/30 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-200/30 rounded-full blur-3xl" />
+          <div className="relative flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <Trophy className="h-12 w-12 text-yellow-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-green-800 flex items-center gap-2">
+                Congratulations! 🎉
+                <Sparkles className="h-5 w-5 text-yellow-500 animate-pulse" />
+              </h2>
+              <p className="text-green-700 mt-1">
+                You've completed all requirements for the HolyLand Award!
+              </p>
+              <p className="text-sm text-green-600 mt-2">
+                {userAreasData?.total_areas} squares and{" "}
+                {userAreasData?.total_regions} regions confirmed.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-green-800">
+                <Mail className="h-4 w-4" />
+                <p className="text-sm">
+                  To claim your certificate, send an email to{" "}
+                  <a
+                    href="mailto:phazeman@gmail.com"
+                    className="font-semibold underline hover:text-green-600"
+                  >
+                    phazeman@gmail.com
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Layout */}
       <div className="flex flex-col lg:flex-row gap-6">
