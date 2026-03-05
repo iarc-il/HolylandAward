@@ -23,7 +23,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: holyland_backend
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-holyland_user}:${POSTGRES_PASSWORD:-holyland_password}@db:5432/${POSTGRES_DB:-holyland_award}

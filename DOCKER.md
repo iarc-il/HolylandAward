@@ -28,10 +28,18 @@ This project is now fully dockerized for easy development and deployment.
    docker-compose up
    ```
 
-3. **Access the application:**
+4. **Access the application:**
    - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8000
-   - Database: localhost:5433
+   - Backend API: http://localhost:1293
+   - Database: localhost:5434
+
+### VS Code Dev Container
+
+Open the project in VS Code and install the **Dev Containers** extension
+(`ms-vscode-remote.remote-containers`). Then use **"Reopen in Container"** from
+the Command Palette. VS Code will start all services via `docker-compose.yml` and
+attach directly to the backend container with Python and TypeScript tooling
+pre-configured.
 
 ### Production
 
@@ -102,15 +110,18 @@ docker-compose up --build backend
 
 ```
 .
+├── .devcontainer/
+│   └── devcontainer.json       # VS Code / GitHub Codespaces dev container
 ├── docker-compose.yml          # Development setup
 ├── docker-compose.prod.yml     # Production setup
 ├── .env.example                # Environment template
 ├── backend/
-│   ├── Dockerfile              # Backend container
+│   ├── Dockerfile              # Production backend container
+│   ├── Dockerfile.dev          # Development backend container (hot reload)
 │   └── .dockerignore
 └── frontend/
     ├── Dockerfile              # Production frontend
-    ├── Dockerfile.dev          # Development frontend
+    ├── Dockerfile.dev          # Development frontend (Vite dev server)
     ├── nginx.conf              # Production nginx config
     └── .dockerignore
 ```
@@ -118,7 +129,7 @@ docker-compose up --build backend
 ## Troubleshooting
 
 ### Port conflicts
-If ports 5173, 8000, or 5433 are in use:
+If ports 5173, 1293, or 5434 are in use:
 ```bash
 # Change ports in docker-compose.yml
 # Example: "3000:5173" instead of "5173:5173"
