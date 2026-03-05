@@ -1,8 +1,14 @@
+# docker-compose.dev-server.yml
+# Run this on the dev server to pull the pre-built :dev images from GHCR.
+# Usage:
+#   docker compose -f docker-compose.dev-server.yml pull
+#   docker compose -f docker-compose.dev-server.yml up -d
+
 services:
   # PostgreSQL Database
   db:
     image: postgres:16-alpine
-    container_name: holyland_db
+    container_name: holyland_db_dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-holyland_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-holyland_password}
@@ -10,7 +16,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-holyland_user} -d ${POSTGRES_DB:-holyland_award}"]
       interval: 10s
@@ -18,23 +24,19 @@ services:
       retries: 5
     networks:
       - holyland_network
+    restart: unless-stopped
 
-  # Backend API
+  # Backend API — pre-built dev image from GHCR
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: holyland_backend
+    image: ${BACKEND_IMAGE:-ghcr.io/iarc-il/holylandaward/backend:dev}
+    container_name: holyland_backend_dev
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-holyland_user}:${POSTGRES_PASSWORD:-holyland_password}@db:5432/${POSTGRES_DB:-holyland_award}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
-      FRONTEND_URL: ${FRONTEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "1293:8000"
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
     depends_on:
       db:
         condition: service_healthy
@@ -42,31 +44,24 @@ services:
       - holyland_network
     restart: unless-stopped
 
-  # Frontend (Development)
+  # Frontend (Dev) — pre-built dev image from GHCR (Vite dev server)
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: holyland_frontend
+    image: ${FRONTEND_IMAGE:-ghcr.io/iarc-il/holylandaward/frontend:dev}
+    container_name: holyland_frontend_dev
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL}
       VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
       VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
     networks:
       - holyland_network
     restart: unless-stopped
 
-  
-
 volumes:
-  postgres_data:
+  postgres_data_dev:
 
 networks:
   holyland_network:
