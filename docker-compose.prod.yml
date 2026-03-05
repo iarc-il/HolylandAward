@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
@@ -20,11 +18,9 @@ services:
       - holyland_network
     restart: always
 
-  # Backend API
+  # Backend API — pre-built image from GHCR
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-ghcr.io/iarc-il/holylandaward/backend:latest}
     container_name: holyland_backend_prod
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -40,15 +36,10 @@ services:
       - holyland_network
     restart: always
 
-  # Frontend (Production)
+  # Frontend (Production) — pre-built image from GHCR
+  # VITE_ variables are baked in at CI build time; no build-args needed here.
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-        VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
-        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
+    image: ${FRONTEND_IMAGE:-ghcr.io/iarc-il/holylandaward/frontend:latest}
     container_name: holyland_frontend_prod
     ports:
       - "80:80"
