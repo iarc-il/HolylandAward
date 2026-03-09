@@ -17,7 +17,7 @@ from utils import verify_clerk_session
 
 from lifespan import lifespan
 
-origins = ["http://localhost:5173"]
+origins = [os.getenv("FRONTEND_URL", "http://localhost:5173")]
 
 
 app = FastAPI(lifespan=lifespan)
