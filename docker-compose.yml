@@ -67,6 +67,8 @@ services:
 
 volumes:
   postgres_data:
+    external: true
+    name: holyland_postgres_data
 
 networks:
   holyland_network:
