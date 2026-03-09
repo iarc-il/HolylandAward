@@ -40,7 +40,7 @@ services:
     image: ${FRONTEND_IMAGE:-ghcr.io/iarc-il/holylandaward/frontend:latest}
     container_name: holyland_frontend_prod
     ports:
-      - "8080:80"
+      - "8080:5173"
     depends_on:
       - backend
     networks:
