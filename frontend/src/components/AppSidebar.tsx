@@ -88,6 +88,11 @@ const AppSidebar = () => {
       <SidebarFooter>
         <div className="px-4 py-2 text-sm text-muted-foreground border-t border-sidebar-border pt-3">
           Amateur Radio Award Management
+          {import.meta.env.VITE_COMMIT_SHA && (
+            <div className="text-xs mt-1 opacity-60">
+              v{import.meta.env.VITE_COMMIT_SHA.slice(0, 7)}
+            </div>
+          )}
         </div>
         <div className="px-4 py-2">
           <SignOutButton>

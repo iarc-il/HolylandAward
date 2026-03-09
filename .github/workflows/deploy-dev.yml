@@ -55,6 +55,7 @@ jobs:
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
             VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
             VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+            VITE_COMMIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=frontend-dev
           cache-to: type=gha,mode=max,scope=frontend-dev
           # Portainer polls GHCR and redeploys automatically — no deploy job needed.
