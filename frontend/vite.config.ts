@@ -15,6 +15,7 @@ export default defineConfig({
   server: {
     host: true, // Listen on all addresses
     port: 5173,
+    allowedHosts: ["holylandaward.iarc.org"],
     watch: {
       usePolling: true, // Required for Docker on Windows/WSL
     },
