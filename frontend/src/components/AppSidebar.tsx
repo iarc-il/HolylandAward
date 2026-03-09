@@ -90,7 +90,7 @@ const AppSidebar = () => {
           Amateur Radio Award Management
           {import.meta.env.VITE_COMMIT_SHA && (
             <div className="text-xs mt-1 opacity-60">
-              v{import.meta.env.VITE_COMMIT_SHA.slice(0, 7)}
+              ver: {import.meta.env.VITE_COMMIT_SHA.slice(0, 7)}
             </div>
           )}
         </div>
