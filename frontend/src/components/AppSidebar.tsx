@@ -12,14 +12,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Button } from "./ui/button";
 import {
   Home,
   Upload,
-  Map,
   FileText,
   Settings,
-  Trophy,
   LogOut,
   Mail,
 } from "lucide-react";
