@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -52,3 +53,4 @@ jobs:
           tags: ${{ env.IMAGE_PREFIX }}/frontend:dev
           cache-from: type=gha,scope=frontend-dev
           cache-to: type=gha,mode=max,scope=frontend-dev
+          # Portainer polls GHCR and redeploys automatically — no deploy job needed.
