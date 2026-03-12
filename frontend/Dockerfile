@@ -6,15 +6,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Accept build arguments for environment variables
+# Accept build arguments for non-sensitive environment variables
 ARG VITE_API_BASE_URL
-ARG VITE_CLERK_PUBLISHABLE_KEY
-ARG VITE_GOOGLE_MAPS_API_KEY
+ARG VITE_COMMIT_SHA
 
-# Set them as environment variables for the build
+# Set non-sensitive variables as environment variables for the build
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
-ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_COMMIT_SHA=$VITE_COMMIT_SHA
 
 # Copy package files
 COPY package*.json ./
@@ -25,8 +23,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application — sensitive keys are injected via secret mounts
+# and are never stored in image layers or metadata
+RUN --mount=type=secret,id=clerk_key,env=VITE_CLERK_PUBLISHABLE_KEY \
+    --mount=type=secret,id=maps_key,env=VITE_GOOGLE_MAPS_API_KEY \
+    npm run build
 
 # Production stage
 FROM nginx:alpine

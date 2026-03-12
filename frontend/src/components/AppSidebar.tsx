@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Home,
@@ -50,6 +51,18 @@ const items = [
 
 const AppSidebar = () => {
   const [showContactDialog, setShowContactDialog] = useState(false);
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  const closeMobileSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
+  const handleContactClick = () => {
+    setShowContactDialog(true);
+    closeMobileSidebar();
+  };
 
   return (
     <Sidebar>
@@ -68,7 +81,7 @@ const AppSidebar = () => {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <Link to={item.url} className="transition-all duration-200">
+                    <Link to={item.url} className="transition-all duration-200" onClick={closeMobileSidebar}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -76,7 +89,7 @@ const AppSidebar = () => {
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setShowContactDialog(true)} className="transition-all duration-200">
+                <SidebarMenuButton onClick={handleContactClick} className="transition-all duration-200">
                   <Mail />
                   <span>Contact Us</span>
                 </SidebarMenuButton>
@@ -88,6 +101,11 @@ const AppSidebar = () => {
       <SidebarFooter>
         <div className="px-4 py-2 text-sm text-muted-foreground border-t border-sidebar-border pt-3">
           Amateur Radio Award Management
+          {import.meta.env.VITE_COMMIT_SHA && (
+            <div className="text-xs mt-1 opacity-60">
+              ver: {import.meta.env.VITE_COMMIT_SHA.slice(0, 7)}
+            </div>
+          )}
         </div>
         <div className="px-4 py-2">
           <SignOutButton>
