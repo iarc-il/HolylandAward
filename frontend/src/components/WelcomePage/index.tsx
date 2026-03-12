@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { SignIn } from "@clerk/clerk-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import awardCert from "@/assets/award_comp.png";
+import awardCert from "@/assets/award_gold_comp.png";
 import logo from "@/assets/logo.svg";
 
 const WelcomePage = () => {
