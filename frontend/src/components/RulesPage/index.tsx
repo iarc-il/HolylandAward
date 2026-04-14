@@ -39,7 +39,7 @@ const RulesPage = () => {
             onClick={() => setLanguage("en")}
             className="rounded-full h-8 px-3 gap-1.5"
           >
-            <span className="text-base">🇬🇧</span>
+            <img src="https://flagcdn.com/w20/gb.png" alt="English" className="w-5 h-auto" />
             <span className="text-xs">EN</span>
           </Button>
           <Button
@@ -48,7 +48,7 @@ const RulesPage = () => {
             onClick={() => setLanguage("he")}
             className="rounded-full h-8 px-3 gap-1.5"
           >
-            <span className="text-base">🇮🇱</span>
+            <img src="https://flagcdn.com/w20/il.png" alt="Hebrew" className="w-5 h-auto" />
             <span className="text-xs">HE</span>
           </Button>
         </div>

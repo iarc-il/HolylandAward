@@ -40,15 +40,15 @@ const items = [
     icon: Upload,
   },
   {
-    title: "Award Info",
+    title: "Rules & Info",
     url: "/rules",
     icon: FileText,
   },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings",
+  //   url: "/settings",
+  //   icon: Settings,
+  // },
 ];
 
 const AppSidebar = () => {
@@ -90,7 +90,7 @@ const AppSidebar = () => {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-4 py-2 text-sm text-muted-foreground border-t border-sidebar-border pt-3">
-          Amateur Radio Award Management
+          HolyLand Award Management
         </div>
         <div className="px-4 py-2">
           <SignOutButton>
