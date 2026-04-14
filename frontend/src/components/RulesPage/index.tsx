@@ -23,7 +23,7 @@ const RulesPage = () => {
         </Button>
       )}
       
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">Award Information & Rules</h1>
           <p className="text-foreground">
@@ -32,7 +32,7 @@ const RulesPage = () => {
         </div>
         
         {/* Language Toggle */}
-        <div className="flex gap-2 items-center bg-card border border-border rounded-full p-1 shadow-sm">
+        <div className="flex gap-2 items-center bg-card border border-border rounded-full p-1 shadow-sm w-fit">
           <Button
             size="sm"
             variant={language === "en" ? "default" : "ghost"}
