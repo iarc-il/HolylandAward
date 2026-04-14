@@ -1,6 +1,7 @@
 import { Button } from "@ui/button";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import useAdifUpload from "@/hooks/useFileUpload";
+import { Upload } from "lucide-react";
 
 type QSO = {
   id?: number;
@@ -19,6 +20,7 @@ type UploadResponse = {
 const FileUploader = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const {
     mutate: uploadFile,
     isPending,
@@ -28,32 +30,47 @@ const FileUploader = () => {
   } = useAdifUpload();
 
   const handleClick = () => {
-    // Reset mutation state and clear previous results
     reset();
     setUploadResult(null);
-    // Check if the ref has a current value and then simulate a click
     fileInputRef.current?.click();
   };
 
+  const processFile = useCallback((file: File) => {
+    reset();
+    setUploadResult(null);
+    uploadFile(
+      { file },
+      {
+        onSuccess: (data) => setUploadResult(data),
+        onError: (error) => console.error("Upload failed:", error),
+      }
+    );
+  }, [reset, uploadFile]);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Get the selected files from the event
     const files = event.target.files;
-    if (files) {
-      const file = files[0]; // Assuming single file upload
-      uploadFile(
-        { file },
-        {
-          onSuccess: (data) => {
-            setUploadResult(data);
-          },
-          onError: (error) => {
-            console.error("Upload failed:", error);
-          },
-        }
-      );
-    }
-    // Reset the input value to allow uploading the same file again
+    if (files?.[0]) processFile(files[0]);
     event.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
   };
 
   return (
@@ -68,13 +85,29 @@ const FileUploader = () => {
         </div>
 
         {/* Upload Section */}
-        <div className="flex flex-col items-center space-y-4 p-8 border-2 border-dashed border-accent rounded-xl bg-secondary/30 transition-colors hover:border-primary">
+        <div
+          className={`flex flex-col items-center space-y-4 p-8 border-2 border-dashed rounded-xl transition-colors cursor-pointer
+            ${isDragging
+              ? "border-primary bg-primary/10 scale-[1.01]"
+              : "border-accent bg-secondary/30 hover:border-primary"
+            }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleClick}
+        >
           <div className="text-center space-y-3">
+            <div className="flex justify-center">
+              <Upload className={`h-10 w-10 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+            </div>
+            <p className="text-base font-medium text-foreground">
+              {isDragging ? "Drop your file here" : "Drag & drop your ADIF file here"}
+            </p>
             <p className="text-sm text-muted-foreground">
-              Select an ADIF file (.adif, .txt, .adi) to upload
+              or click to browse (.adif, .txt, .adi)
             </p>
             <Button
-              onClick={handleClick}
+              onClick={(e) => { e.stopPropagation(); handleClick(); }}
               disabled={isPending}
               className="min-w-[150px]"
               size="lg"
