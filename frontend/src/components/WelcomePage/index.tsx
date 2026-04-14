@@ -54,7 +54,7 @@ const WelcomePage = () => {
         <div className="flex gap-4 justify-center items-center flex-shrink-0">
           <Button
             onClick={() => navigate('/rules')}
-            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg">
+            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-2 border-transparent">
             About & Rules
           </Button>
           <Button
