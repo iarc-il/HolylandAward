@@ -60,7 +60,7 @@ const WelcomePage = () => {
           <Button
             variant="outline"
             onClick={() => setShowSignIn(true)}
-            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg">
+            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-0 ring-2 ring-border hover:ring-primary">
             Sign In
           </Button>
         </div>
