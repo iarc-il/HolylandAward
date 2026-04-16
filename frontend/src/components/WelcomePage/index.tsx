@@ -51,18 +51,16 @@ const WelcomePage = () => {
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex gap-4 justify-center flex-shrink-0">
+        <div className="flex gap-4 justify-center items-center flex-shrink-0">
           <Button
-            size="lg"
             onClick={() => navigate('/rules')}
-            className="px-6 md:px-8 py-4 md:py-6 text-base md:text-lg">
+            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-2 border-transparent">
             About & Rules
           </Button>
           <Button
-            size="lg"
             variant="outline"
             onClick={() => setShowSignIn(true)}
-            className="px-6 md:px-8 py-4 md:py-6 text-base md:text-lg">
+            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-0 ring-2 ring-border hover:ring-primary">
             Sign In
           </Button>
         </div>

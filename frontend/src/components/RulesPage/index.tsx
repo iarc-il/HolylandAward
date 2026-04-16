@@ -23,7 +23,7 @@ const RulesPage = () => {
         </Button>
       )}
       
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">Award Information & Rules</h1>
           <p className="text-foreground">
@@ -32,14 +32,14 @@ const RulesPage = () => {
         </div>
         
         {/* Language Toggle */}
-        <div className="flex gap-2 items-center bg-card border border-border rounded-full p-1 shadow-sm">
+        <div className="flex gap-2 items-center bg-card border border-border rounded-full p-1 shadow-sm w-fit">
           <Button
             size="sm"
             variant={language === "en" ? "default" : "ghost"}
             onClick={() => setLanguage("en")}
             className="rounded-full h-8 px-3 gap-1.5"
           >
-            <span className="text-base">🇬🇧</span>
+            <img src="https://flagcdn.com/w20/gb.png" alt="English" className="w-5 h-auto" />
             <span className="text-xs">EN</span>
           </Button>
           <Button
@@ -48,7 +48,7 @@ const RulesPage = () => {
             onClick={() => setLanguage("he")}
             className="rounded-full h-8 px-3 gap-1.5"
           >
-            <span className="text-base">🇮🇱</span>
+            <img src="https://flagcdn.com/w20/il.png" alt="Hebrew" className="w-5 h-auto" />
             <span className="text-xs">HE</span>
           </Button>
         </div>
