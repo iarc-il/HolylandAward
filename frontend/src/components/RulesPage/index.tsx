@@ -10,7 +10,7 @@ const RulesPage = () => {
   const { isSignedIn } = useAuth();
 
   return (
-    <div className="flex flex-col space-y-6 max-w-4xl pb-16">
+    <div className="flex flex-col space-y-6 max-w-4xl pb-16 mx-auto w-full">
       {/* Back button for non-authenticated users */}
       {!isSignedIn && (
         <Button
@@ -19,7 +19,7 @@ const RulesPage = () => {
           className="self-start -ml-2"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
+          Go Back
         </Button>
       )}
       
