@@ -54,9 +54,9 @@ class AdifService:
 
         areas = []
         possible_areas = {
-            "STX_STRING": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("STX_STRING", "")),
-            "SRX_STRING": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("SRX_STRING", "")),
-            "COMMENT": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("COMMENT", "")),
+            "STX_STRING": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("STX_STRING", "").upper()),
+            "SRX_STRING": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("SRX_STRING", "").upper()),
+            "COMMENT": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("COMMENT", "").upper()),
         }
 
         for possible_area in possible_areas.values():
