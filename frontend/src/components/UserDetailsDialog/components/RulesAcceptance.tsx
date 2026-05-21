@@ -46,7 +46,7 @@ const RulesAcceptance: React.FC<RulesAcceptanceProps> = ({
           </p>
           {errors.acceptedRules && (
             <p className="text-sm text-red-500 mt-1">
-              {errors.acceptedRules?.message as string}
+              You must accept the rules in order to continue.
             </p>
           )}
         </div>
