@@ -1,12 +1,16 @@
+import os
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
+from dotenv import load_dotenv
 
-# Database URL - you can change this to your PostgreSQL connection string
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://yoav.katzman@localhost:5433/holyland_award"
-)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("Missing DATABASE_URL. Add it to backend/.env.")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
