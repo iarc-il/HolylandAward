@@ -4,10 +4,20 @@ from fastapi import Request, HTTPException, status
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-clerk = Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY", ""))
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")
+if not CLERK_SECRET_KEY:
+    raise RuntimeError("Missing CLERK_SECRET_KEY. Add it to backend/.env.")
+if not CLERK_SECRET_KEY.startswith(("sk_test_", "sk_live_")):
+    raise RuntimeError(
+        "CLERK_SECRET_KEY must be a Clerk secret key starting with sk_test_ or "
+        "sk_live_. Do not use the publishable pk_test_/pk_live_ key here."
+    )
+
+clerk = Clerk(bearer_auth=CLERK_SECRET_KEY)
 
 
 async def get_or_create_user_from_clerk(db: Session, clerk_user_id: str):
