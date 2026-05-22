@@ -20,7 +20,7 @@ class QSOLogs(Base):
     date = Column(String, index=False)  # QSO_DATE
     freq = Column(Float, index=False)  # FREQ
     spotter = Column(
-        String, ForeignKey("users.callsign"), index=True
+        String, ForeignKey("users.callsign", onupdate="CASCADE"), index=True
     )  # References Users.callsign
     dx = Column(String, index=True)  # DX callsign
     area = Column(String, index=True)  # Area or grid square
