@@ -32,6 +32,14 @@ const userDetailsSchema = z
             /^[A-Z0-9]+$/,
             "Callsign must contain only letters and numbers",
           ),
+      )
+      .pipe(
+        z
+          .string()
+          .regex(
+            /^(?=.*[A-Z])(?=.*\d).+$/,
+            "Callsign must contain both letters and numbers",
+          ),
       ),
     callsignConfirm: z
       .string()

@@ -32,6 +32,14 @@ const profileSettingsSchema = z.object({
       z
         .string()
         .regex(/^[A-Z0-9]+$/, "Callsign must contain only letters and numbers"),
+    )
+    .pipe(
+      z
+        .string()
+        .regex(
+          /^(?=.*[A-Z])(?=.*\d).+$/,
+          "Callsign must contain both letters and numbers",
+        ),
     ),
   region: z.enum(["0", "1", "2", "3"], { message: "Please select a region" }),
 });

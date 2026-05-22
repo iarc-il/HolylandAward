@@ -12,6 +12,8 @@ from typing import Optional, Dict, Any
 
 
 CALLSIGN_PATTERN = re.compile(r"^[A-Z0-9/]+$")
+CALLSIGN_LETTER_PATTERN = re.compile(r"[A-Z]")
+CALLSIGN_NUMBER_PATTERN = re.compile(r"\d")
 
 
 def normalize_callsign(callsign: str) -> str:
@@ -21,6 +23,10 @@ def normalize_callsign(callsign: str) -> str:
         raise ValueError("Callsign is required")
     if not CALLSIGN_PATTERN.fullmatch(normalized):
         raise ValueError("Callsign must contain only letters and numbers")
+    if not CALLSIGN_LETTER_PATTERN.search(
+        normalized
+    ) or not CALLSIGN_NUMBER_PATTERN.search(normalized):
+        raise ValueError("Callsign must contain both letters and numbers")
 
     return normalized
 
