@@ -19,8 +19,19 @@ interface UpdateProfileRequest {
 
 interface CachedProfile {
   callsign?: string;
-  region?: number;
+  region?: number | string;
 }
+
+const normalizeRegion = (region: unknown): number | undefined => {
+  if (region === null || region === undefined || region === "") {
+    return undefined;
+  }
+
+  const normalizedRegion = Number(region);
+  return [0, 1, 2, 3].includes(normalizedRegion)
+    ? normalizedRegion
+    : undefined;
+};
 
 // Safe localStorage hook that doesn't break when userId is null
 function useSafeLocalStorage<T>(
@@ -68,13 +79,10 @@ export const useProfile = () => {
 
   const [cachedProfile, setCachedProfile] =
     useSafeLocalStorage<CachedProfile | null>(cacheKey, null);
+  const cachedRegion = normalizeRegion(cachedProfile?.region);
 
   // Check if cached profile is complete (region can be 0, so check for null/undefined explicitly)
-  const isCacheComplete = !!(
-    cachedProfile?.callsign &&
-    cachedProfile?.region !== undefined &&
-    cachedProfile?.region !== null
-  );
+  const isCacheComplete = !!(cachedProfile?.callsign && cachedRegion !== undefined);
 
   // Query for fetching profile
   const profileQuery = useQuery({
@@ -85,18 +93,22 @@ export const useProfile = () => {
         Authorization: `Bearer ${token}`,
       });
       const profile = await response.json();
+      const normalizedProfile = {
+        ...profile,
+        region: normalizeRegion(profile.region),
+      };
 
       // Update localStorage cache when we get fresh data (only if we have a valid userId)
       if (shouldUseCache) {
         setCachedProfile({
-          callsign: profile.callsign,
-          region: profile.region,
+          callsign: normalizedProfile.callsign,
+          region: normalizedProfile.region,
         });
       }
 
-      return profile;
+      return normalizedProfile;
     },
-    enabled: isSignedIn && !isCacheComplete, // Fetch if signed in AND cache is missing or incomplete
+    enabled: isSignedIn, // Always fetch so stale local profile cache cannot mask server data
     retry: 1, // Only retry once on failure
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
@@ -118,7 +130,11 @@ export const useProfile = () => {
         },
       );
 
-      return response.json();
+      const profile = await response.json();
+      return {
+        ...profile,
+        region: normalizeRegion(profile.region),
+      };
     },
     onSuccess: (data) => {
       console.log("Profile updated successfully:", data);
@@ -142,20 +158,21 @@ export const useProfile = () => {
     },
   });
 
-  // Create combined profile data (prioritize cached data)
-  const combinedProfile = cachedProfile
+  // Use fresh API data when available; cached data is only an initial fallback.
+  const cachedCombinedProfile = isCacheComplete
     ? ({
         id: 0,
         clerk_user_id: userId || "",
         callsign: cachedProfile.callsign,
-        region: cachedProfile.region,
+        region: cachedRegion,
       } as UserProfile)
-    : profileQuery.data;
+    : undefined;
+  const combinedProfile = profileQuery.data ?? cachedCombinedProfile;
 
   return {
     // Profile query data and states (use combined profile)
     profile: combinedProfile,
-    isLoading: !isCacheComplete && profileQuery.isLoading,
+    isLoading: !combinedProfile && profileQuery.isLoading,
     error: profileQuery.error,
     isError: profileQuery.isError,
 
@@ -167,8 +184,7 @@ export const useProfile = () => {
     isUpdateError: updateMutation.isError,
 
     // Combined loading state
-    isAnyLoading:
-      (!isCacheComplete && profileQuery.isLoading) || updateMutation.isPending,
+    isAnyLoading: (!combinedProfile && profileQuery.isLoading) || updateMutation.isPending,
 
     // Refetch function
     refetch: profileQuery.refetch,

@@ -12,14 +12,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Button } from "./ui/button";
 import {
   Home,
   Upload,
-  Map,
   FileText,
   Settings,
-  Trophy,
   LogOut,
   Mail,
 } from "lucide-react";
@@ -44,11 +41,11 @@ const items = [
     url: "/rules",
     icon: FileText,
   },
-  // {
-  //   title: "Settings",
-  //   url: "/settings",
-  //   icon: Settings,
-  // },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
 ];
 
 const AppSidebar = () => {
@@ -60,12 +57,13 @@ const AppSidebar = () => {
         <div className="px-2 py-3 flex flex-col items-center gap-2">
           <img src={logo} alt="Holyland Award Logo" className="h-20 w-auto" />
           <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
-        
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-semibold">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sm font-semibold">
+            Navigation
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -79,7 +77,10 @@ const AppSidebar = () => {
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setShowContactDialog(true)} className="transition-all duration-200">
+                <SidebarMenuButton
+                  onClick={() => setShowContactDialog(true)}
+                  className="transition-all duration-200"
+                >
                   <Mail />
                   <span>Contact Us</span>
                 </SidebarMenuButton>
