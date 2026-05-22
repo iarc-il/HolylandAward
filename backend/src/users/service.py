@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+import re
 from users.repository import (
     create_user,
     get_user_by_clerk_id,
@@ -8,6 +9,20 @@ from users.repository import (
 )
 from users.models import Users
 from typing import Optional, Dict, Any
+
+
+CALLSIGN_PATTERN = re.compile(r"^[A-Z0-9/]+$")
+
+
+def normalize_callsign(callsign: str) -> str:
+    normalized = callsign.strip().upper()
+
+    if not normalized:
+        raise ValueError("Callsign is required")
+    if not CALLSIGN_PATTERN.fullmatch(normalized):
+        raise ValueError("Callsign must contain only letters and numbers")
+
+    return normalized
 
 
 def handle_clerk_user_created(db: Session, webhook_data: Dict[str, Any]) -> Users:
@@ -50,28 +65,32 @@ def update_user_callsign(
     db: Session, clerk_user_id: str, callsign: str
 ) -> Optional[Users]:
     """Update user's callsign"""
-    # Check if callsign is already taken
-    existing_user = get_user_by_callsign(db, callsign)
-    if existing_user and existing_user.clerk_user_id != clerk_user_id:
-        raise ValueError(f"Callsign {callsign} is already taken")
+    normalized_callsign = normalize_callsign(callsign)
 
-    return repo_update_user_callsign(db, clerk_user_id, callsign)
+    # Check if callsign is already taken
+    existing_user = get_user_by_callsign(db, normalized_callsign)
+    if existing_user and existing_user.clerk_user_id != clerk_user_id:
+        raise ValueError(f"Callsign {normalized_callsign} is already taken")
+
+    return repo_update_user_callsign(db, clerk_user_id, normalized_callsign)
 
 
 def update_user_profile(
     db: Session, clerk_user_id: str, callsign: str, region: int
 ) -> Optional[Users]:
     """Update user's callsign and region"""
+    normalized_callsign = normalize_callsign(callsign)
+
     # Validate region (0 = Israel, 1-3 = IARU regions)
     if region not in [0, 1, 2, 3]:
         raise ValueError("Region must be 0 (Israel), 1, 2, or 3")
 
     # Check if callsign is already taken
-    existing_user = get_user_by_callsign(db, callsign)
+    existing_user = get_user_by_callsign(db, normalized_callsign)
     if existing_user and existing_user.clerk_user_id != clerk_user_id:
-        raise ValueError(f"Callsign {callsign} is already taken")
+        raise ValueError(f"Callsign {normalized_callsign} is already taken")
 
-    return repo_update_user_profile(db, clerk_user_id, callsign, region)
+    return repo_update_user_profile(db, clerk_user_id, normalized_callsign, region)
 
 
 def get_user_callsign(db: Session, clerk_user_id: str) -> Optional[str]:
