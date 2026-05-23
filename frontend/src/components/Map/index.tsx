@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 
-import { areas, qsoData } from "@/data/areas";
+import { areas } from "@/data/areas";
 import { Area } from "@/types/map";
 import { useUserAreasAndRegions } from "@/api/useUserAreasAndRegions";
 
@@ -68,7 +68,6 @@ const createTextOverlayClass = () => {
 const Map: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null); // google.maps.Map when loaded
-  const [searchValue, setSearchValue] = useState("");
   const polygonsRef = useRef<any[]>([]); // google.maps.Polygon[] when loaded
   const markersRef = useRef<any[]>([]); // google.maps.Marker[] when loaded
   const overlaysRef = useRef<any[]>([]); // TextOverlay[] when loaded
@@ -80,7 +79,6 @@ const Map: React.FC = () => {
   const {
     data: { areas: userAreas } = {},
     isLoading,
-    isError,
   } = useUserAreasAndRegions();
 
   // Grid constants from original HTML
@@ -512,109 +510,6 @@ const Map: React.FC = () => {
       showGrid(); // Re-render grid with user areas
     }
   }, [userAreas, isLoading, map, TextOverlay, showGrid]);
-
-  const showAreas = () => {
-    if (!map || !TextOverlay) return;
-
-    clearMap();
-    const newPolygons: unknown[] = []; // google.maps.Polygon[] when loaded
-
-    areas.forEach((area: Area) => {
-      const polygon = new (window as any).google.maps.Polygon({
-        paths: area.coords,
-        strokeColor: "#FF0000",
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: "#FF0000",
-        fillOpacity: 0.35,
-      });
-
-      polygon.setMap(map);
-      newPolygons.push(polygon);
-
-      // Add area label
-      const overlay = new TextOverlay(
-        new (window as any).google.maps.LatLng(
-          area.center.lat,
-          area.center.lng,
-        ),
-        area.name,
-      );
-      overlay.setMap(map);
-      overlaysRef.current = [...overlaysRef.current, overlay];
-    });
-
-    polygonsRef.current = newPolygons;
-  };
-
-  const showMissingSquares = () => {
-    if (!map || !TextOverlay) return;
-
-    clearMap();
-    const newGridOverlays: unknown[] = []; // google.maps.Polygon[] when loaded
-
-    const workedSquares = new Set(
-      qsoData.map((qso: { area: string }) => qso.area.substring(0, 3)),
-    ); // Extract square part
-
-    // Generate all possible squares in Israel area
-    for (let lat = 29.5; lat <= 33.5; lat += 1 / 24) {
-      for (let lng = 34.0; lng <= 36.0; lng += 1 / 12) {
-        const square = getSquareByLatLng(lat, lng);
-
-        if (!workedSquares.has(square)) {
-          const bounds = [
-            { lat: lat, lng: lng },
-            { lat: lat + 1 / 24, lng: lng },
-            { lat: lat + 1 / 24, lng: lng + 1 / 12 },
-            { lat: lat, lng: lng + 1 / 12 },
-          ];
-
-          const polygon = new (window as any).google.maps.Polygon({
-            paths: bounds,
-            strokeColor: "#0000FF",
-            strokeOpacity: 0.8,
-            strokeWeight: 1,
-            fillColor: "#0000FF",
-            fillOpacity: 0.2,
-          });
-
-          polygon.setMap(map);
-          newGridOverlays.push(polygon);
-
-          // Add square label
-          const overlay = new TextOverlay(
-            new (window as any).google.maps.LatLng(lat + 1 / 48, lng + 1 / 24),
-            square,
-          );
-          overlay.setMap(map);
-          overlaysRef.current = [...overlaysRef.current, overlay];
-        }
-      }
-    }
-
-    gridOverlaysRef.current = newGridOverlays;
-  };
-
-  const showWorkedSquares = () => {
-    if (!map) return;
-
-    clearMap();
-    const newMarkers: unknown[] = []; // google.maps.Marker[] when loaded
-    const newGridOverlays: unknown[] = []; // google.maps.Polygon[] when loaded
-
-    // For now, just show the worked areas as grid overlays since we don't have exact coordinates
-    qsoData.forEach((qso: { area: string }) => {
-      const square = qso.area.substring(0, 3); // Extract square part (e.g., "A10" from "A10TA")
-
-      // We would need to convert square back to coordinates to show markers
-      // For now, just show a message
-      console.log(`Worked square: ${square} from area: ${qso.area}`);
-    });
-
-    markersRef.current = newMarkers;
-    gridOverlaysRef.current = newGridOverlays;
-  };
 
   return (
     <div className="flex flex-col h-full">

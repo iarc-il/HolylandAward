@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mail, MessageCircle } from "lucide-react";
+import { Mail } from "lucide-react";
 
 interface ContactDialogProps {
   isOpen: boolean;
