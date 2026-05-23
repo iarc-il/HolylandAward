@@ -118,7 +118,6 @@ export const useProfile = () => {
     mutationFn: async (data: UpdateProfileRequest): Promise<UserProfile> => {
       const token = await getToken();
 
-      console.log("token:", token);
       const response = await apiClient.patch(
         "/user/profile",
         {
@@ -137,8 +136,6 @@ export const useProfile = () => {
       };
     },
     onSuccess: (data) => {
-      console.log("Profile updated successfully:", data);
-
       // Update localStorage cache immediately (only if we have a valid userId)
       if (shouldUseCache) {
         setCachedProfile({
