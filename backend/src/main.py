@@ -17,7 +17,7 @@ from utils import verify_clerk_session
 
 from lifespan import lifespan
 
-origins = ["http://localhost:5173"]
+origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
 app = FastAPI(lifespan=lifespan)
