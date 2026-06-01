@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 
@@ -14,9 +14,8 @@ class QSO(BaseModel):
 class QSOResponse(QSO):
     """Schema for QSO response (includes database fields)"""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True  # Allows Pydantic to work with SQLAlchemy models

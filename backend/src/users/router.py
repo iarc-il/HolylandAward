@@ -33,7 +33,7 @@ async def get_user_profile(
         # Auto-create user if doesn't exist (replaces webhook pattern)
         user = await get_or_create_user_from_clerk(db, user_id)
 
-        return UserResponse.from_orm(user)
+        return UserResponse.model_validate(user)
 
     except Exception as e:
         print(f"Get profile error: {e}")
@@ -69,7 +69,7 @@ async def update_user_profile(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
-        return UserResponse.from_orm(updated_user)
+        return UserResponse.model_validate(updated_user)
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
