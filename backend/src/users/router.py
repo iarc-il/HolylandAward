@@ -35,6 +35,8 @@ async def get_user_profile(
 
         return UserResponse.model_validate(user)
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Get profile error: {e}")
         raise HTTPException(
@@ -73,6 +75,8 @@ async def update_user_profile(
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Profile update error: {e}")
         raise HTTPException(
