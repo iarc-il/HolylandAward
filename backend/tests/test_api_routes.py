@@ -12,7 +12,7 @@ from database import Base, get_db
 from main import app
 from qsos.models import QSOLogs
 from users import router as users_router_module
-from users.models import Users
+from users.models import LinkedCallsigns, Users
 from utils import verify_clerk_session
 
 
@@ -82,7 +82,16 @@ def test_get_user_profile_returns_current_user(client, db_session):
 
 
 def test_patch_user_profile_updates_callsign_and_region(client, db_session):
-    create_user(db_session, callsign="4Z1ABC", region=1)
+    user = create_user(db_session, callsign="4Z1ABC", region=1)
+    qso = QSOLogs(
+        date="20240101",
+        freq=14.25,
+        spotter="4Z1ABC",
+        dx="W1ABC",
+        area="H08HF",
+    )
+    db_session.add(qso)
+    db_session.commit()
 
     response = client.patch(
         "/user/profile",
@@ -92,6 +101,14 @@ def test_patch_user_profile_updates_callsign_and_region(client, db_session):
     assert response.status_code == 200
     assert response.json()["callsign"] == "N0CALL"
     assert response.json()["region"] == 0
+
+    link = db_session.query(LinkedCallsigns).one()
+    assert link.user_id == user.id
+    assert link.old_callsign == "4Z1ABC"
+    assert link.new_callsign == "N0CALL"
+
+    db_session.refresh(qso)
+    assert qso.spotter == "4Z1ABC"
 
 
 def test_get_user_callsign_returns_current_user_details(client, db_session):
@@ -112,6 +129,38 @@ def test_patch_user_profile_rejects_duplicate_callsign(client, db_session):
             username="other",
             callsign="N0CALL",
             region=0,
+        )
+    )
+    db_session.commit()
+
+    response = client.patch(
+        "/user/profile",
+        json={"callsign": "n0call", "region": 1},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Callsign N0CALL is already taken"}
+
+
+def test_patch_user_profile_rejects_linked_callsign_owned_by_another_user(
+    client, db_session
+):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    other_user = Users(
+        clerk_user_id="user_2",
+        email="other@example.com",
+        username="other",
+        callsign="K1NEW",
+        region=0,
+    )
+    db_session.add(other_user)
+    db_session.commit()
+    db_session.refresh(other_user)
+    db_session.add(
+        LinkedCallsigns(
+            user_id=other_user.id,
+            old_callsign="N0CALL",
+            new_callsign="K1NEW",
         )
     )
     db_session.commit()
@@ -174,6 +223,53 @@ def test_get_qsos_by_user_returns_area_and_region_totals(client, db_session):
     assert set(body["areas"]) == {"H08HF", "J05HF", "A22BS"}
     assert set(body["regions"]) == {"HF", "BS"}
     assert body["total_areas"] == 3
+    assert body["total_regions"] == 2
+
+
+def test_get_qsos_by_user_counts_linked_callsigns_once(client, db_session):
+    user = create_user(db_session, callsign="N0CALL", region=1)
+    db_session.add(
+        LinkedCallsigns(
+            user_id=user.id,
+            old_callsign="4Z1ABC",
+            new_callsign="N0CALL",
+        )
+    )
+    db_session.add_all(
+        [
+            QSOLogs(
+                date="20240101",
+                freq=14.25,
+                spotter="4Z1ABC",
+                dx="W1ABC",
+                area="H08HF",
+            ),
+            QSOLogs(
+                date="20240102",
+                freq=7.1,
+                spotter="N0CALL",
+                dx="W2ABC",
+                area="H08HF",
+            ),
+            QSOLogs(
+                date="20240103",
+                freq=21.3,
+                spotter="N0CALL",
+                dx="W3ABC",
+                area="A22BS",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/qsos/by-user")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["callsign"] == "N0CALL"
+    assert set(body["areas"]) == {"H08HF", "A22BS"}
+    assert set(body["regions"]) == {"HF", "BS"}
+    assert body["total_areas"] == 2
     assert body["total_regions"] == 2
 
 

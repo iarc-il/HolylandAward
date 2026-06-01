@@ -45,3 +45,13 @@ def get_areas_by_spotter(db: Session, spotter: str) -> list[str]:
     result = db.execute(stmt)
     areas = result.scalars().all()
     return list(areas)
+
+
+def get_areas_by_spotters(db: Session, spotters: list[str]) -> list[str]:
+    if not spotters:
+        return []
+
+    stmt = select(QSOLogs.area).where(QSOLogs.spotter.in_(spotters)).distinct()
+    result = db.execute(stmt)
+    areas = result.scalars().all()
+    return list(areas)

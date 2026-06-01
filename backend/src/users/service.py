@@ -4,6 +4,7 @@ from users.repository import (
     create_user,
     get_user_by_clerk_id,
     get_user_by_callsign,
+    get_user_by_linked_callsign,
     update_user_callsign as repo_update_user_callsign,
     update_user_profile as repo_update_user_profile,
 )
@@ -29,6 +30,16 @@ def normalize_callsign(callsign: str) -> str:
         raise ValueError("Callsign must contain both letters and numbers")
 
     return normalized
+
+
+def ensure_callsign_available(db: Session, clerk_user_id: str, callsign: str) -> None:
+    existing_user = get_user_by_callsign(db, callsign)
+    if existing_user and existing_user.clerk_user_id != clerk_user_id:
+        raise ValueError(f"Callsign {callsign} is already taken")
+
+    linked_user = get_user_by_linked_callsign(db, callsign)
+    if linked_user and linked_user.clerk_user_id != clerk_user_id:
+        raise ValueError(f"Callsign {callsign} is already taken")
 
 
 def handle_clerk_user_created(db: Session, webhook_data: Dict[str, Any]) -> Users:
@@ -72,11 +83,7 @@ def update_user_callsign(
 ) -> Optional[Users]:
     """Update user's callsign"""
     normalized_callsign = normalize_callsign(callsign)
-
-    # Check if callsign is already taken
-    existing_user = get_user_by_callsign(db, normalized_callsign)
-    if existing_user and existing_user.clerk_user_id != clerk_user_id:
-        raise ValueError(f"Callsign {normalized_callsign} is already taken")
+    ensure_callsign_available(db, clerk_user_id, normalized_callsign)
 
     return repo_update_user_callsign(db, clerk_user_id, normalized_callsign)
 
@@ -91,10 +98,7 @@ def update_user_profile(
     if region not in [0, 1, 2, 3]:
         raise ValueError("Region must be 0 (Israel), 1, 2, or 3")
 
-    # Check if callsign is already taken
-    existing_user = get_user_by_callsign(db, normalized_callsign)
-    if existing_user and existing_user.clerk_user_id != clerk_user_id:
-        raise ValueError(f"Callsign {normalized_callsign} is already taken")
+    ensure_callsign_available(db, clerk_user_id, normalized_callsign)
 
     return repo_update_user_profile(db, clerk_user_id, normalized_callsign, region)
 

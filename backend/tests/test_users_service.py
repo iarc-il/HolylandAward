@@ -66,6 +66,9 @@ def test_update_user_profile_saves_normalized_callsign(monkeypatch):
     db = object()
     monkeypatch.setattr(user_service, "get_user_by_callsign", lambda db, callsign: None)
     monkeypatch.setattr(
+        user_service, "get_user_by_linked_callsign", lambda db, callsign: None
+    )
+    monkeypatch.setattr(
         user_service, "repo_update_user_profile", fake_update_user_profile
     )
 

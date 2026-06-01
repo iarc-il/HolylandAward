@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from utils import verify_clerk_session
-from users.repository import get_user_by_clerk_id
-from qsos.repository import get_areas_by_spotter
+from users.repository import get_callsigns_for_user, get_user_by_clerk_id
+from qsos.repository import get_areas_by_spotters
 from qsos.service import get_regions_from_areas
 
 router = APIRouter(prefix="/qsos", tags=["qsos"])
@@ -25,8 +25,9 @@ def get_user_areas_and_regions(
     if not user.callsign:
         raise HTTPException(status_code=400, detail="User has no callsign assigned")
 
-    # Get all areas for this user's callsign
-    areas = get_areas_by_spotter(db, user.callsign)
+    # Get all areas for this user's current and historical linked callsigns
+    callsigns = get_callsigns_for_user(db, user)
+    areas = get_areas_by_spotters(db, callsigns)
 
     # Extract unique regions from areas
     regions = get_regions_from_areas(areas)

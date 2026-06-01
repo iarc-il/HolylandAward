@@ -21,7 +21,7 @@ from database import Base
 
 # Import all models to ensure they're included in migrations
 from qsos.models import QSOLogs
-from users.models import Users
+from users.models import LinkedCallsigns, Users
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
