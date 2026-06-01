@@ -80,6 +80,7 @@ const SettingsPage = () => {
       region: undefined,
     },
   });
+  const linkedCallsigns = profile?.linked_callsigns ?? [];
 
   useEffect(() => {
     reset({
@@ -203,6 +204,32 @@ const SettingsPage = () => {
             </Button>
           </div>
         </form>
+
+        <div className="mt-8 rounded-lg border border-border bg-muted/30 p-4">
+          <h3 className="text-lg font-semibold">Linked Callsigns</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Previous callsigns remain linked and are included in award progress.
+          </p>
+
+          {linkedCallsigns.length > 0 ? (
+            <div className="mt-4 space-y-2">
+              {linkedCallsigns.map((link) => (
+                <div
+                  key={link.id}
+                  className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <span className="font-medium uppercase">{link.old_callsign}</span>
+                  <span className="text-muted-foreground">-&gt;</span>
+                  <span className="font-medium uppercase">{link.new_callsign}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No previous callsigns are linked yet.
+            </p>
+          )}
+        </div>
       </section>
     </div>
   );

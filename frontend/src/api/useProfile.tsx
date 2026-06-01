@@ -3,6 +3,13 @@ import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "@/lib/api";
 import { useState } from "react";
 
+interface LinkedCallsign {
+  id: number;
+  old_callsign: string;
+  new_callsign: string;
+  created_at?: string;
+}
+
 interface UserProfile {
   id: number;
   clerk_user_id: string;
@@ -10,6 +17,7 @@ interface UserProfile {
   username?: string;
   callsign?: string;
   region?: number;
+  linked_callsigns?: LinkedCallsign[];
 }
 
 interface UpdateProfileRequest {

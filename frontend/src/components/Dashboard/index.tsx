@@ -40,6 +40,7 @@ const Dashboard = () => {
   } = useUserAreasAndRegions();
 
   const requiredAmounts = getRequiredAmounts(profile?.region);
+  const countedCallsigns = userAreasData?.callsigns ?? [];
 
   // Check if all requirements are met
   const areasComplete =
@@ -178,6 +179,23 @@ const Dashboard = () => {
                     ? "N/A"
                     : (userAreasData?.callsign ?? "Not Set")}
               </p>
+              {countedCallsigns.length > 1 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Counting QSOs from
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {countedCallsigns.map((callsign) => (
+                      <span
+                        key={callsign}
+                        className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground"
+                      >
+                        {callsign}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

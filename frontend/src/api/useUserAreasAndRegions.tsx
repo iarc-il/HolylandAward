@@ -4,6 +4,7 @@ import { apiClient } from "../lib/api";
 
 interface UserAreasAndRegions {
   callsign: string;
+  callsigns: string[];
   areas: string[];
   regions: string[];
   total_areas: number;
