@@ -10,6 +10,7 @@ from database import get_db
 from qsos.repository import insert_qsos, get_areas_by_spotter
 from qsos.schema import QSO
 from users.router import router as users_router
+from users.repository import get_callsigns_for_user
 from qsos.router import router as qsos_router
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,13 +81,14 @@ async def upload_file(
         )
 
     spotter_callsign = user.callsign
+    spotter_callsigns = get_callsigns_for_user(db, user)
 
     contents = await file.read()
     with open(f"temp_{file.filename}", "wb") as f:
         f.write(contents)
 
     qsos, header = adif_io.read_from_file(f"temp_{file.filename}")
-    adif_service = AdifService(qsos, spotter_callsign=spotter_callsign)
+    adif_service = AdifService(qsos, spotter_callsigns=spotter_callsigns)
     valid_entries = adif_service.get_valid_entries()
 
     # Convert valid entries to QSO schema objects
@@ -95,7 +97,7 @@ async def upload_file(
         qso_obj = QSO(
             date=entry.get("date", ""),
             freq=float(entry.get("freq", 0)),
-            spotter=spotter_callsign,
+            spotter=entry.get("spotter", ""),
             dx=entry.get("dx", ""),
             area=entry.get("area", ""),
         )
@@ -115,6 +117,7 @@ async def upload_file(
                 "id": qso.id,
                 "date": qso.date,
                 "freq": qso.freq,
+                "spotter": qso.spotter,
                 "dx": qso.dx,
                 "area": qso.area,
             }

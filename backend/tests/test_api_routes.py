@@ -366,6 +366,7 @@ def test_upload_file_parses_and_returns_inserted_qsos(
                 id=10,
                 date="20240101",
                 freq=14.25,
+                spotter="4Z1ABC",
                 dx="W1ABC",
                 area="H08HF",
             )
@@ -388,6 +389,7 @@ def test_upload_file_parses_and_returns_inserted_qsos(
                 "id": 10,
                 "date": "20240101",
                 "freq": 14.25,
+                "spotter": "4Z1ABC",
                 "dx": "W1ABC",
                 "area": "H08HF",
             }
