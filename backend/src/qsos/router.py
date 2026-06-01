@@ -34,6 +34,7 @@ def get_user_areas_and_regions(
 
     return {
         "callsign": user.callsign,
+        "callsigns": callsigns,
         "areas": areas,
         "regions": regions,
         "total_areas": len(areas),

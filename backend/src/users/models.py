@@ -30,7 +30,10 @@ class Users(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     linked_callsigns = relationship(
-        "LinkedCallsigns", back_populates="user", cascade="all, delete-orphan"
+        "LinkedCallsigns",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="LinkedCallsigns.id",
     )
 
 

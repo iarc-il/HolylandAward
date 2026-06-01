@@ -78,6 +78,7 @@ def test_get_user_profile_returns_current_user(client, db_session):
         "username": "tester",
         "callsign": "4Z1ABC",
         "region": 1,
+        "linked_callsigns": [],
     }
 
 
@@ -99,8 +100,12 @@ def test_patch_user_profile_updates_callsign_and_region(client, db_session):
     )
 
     assert response.status_code == 200
-    assert response.json()["callsign"] == "N0CALL"
-    assert response.json()["region"] == 0
+    body = response.json()
+    assert body["callsign"] == "N0CALL"
+    assert body["region"] == 0
+    assert len(body["linked_callsigns"]) == 1
+    assert body["linked_callsigns"][0]["old_callsign"] == "4Z1ABC"
+    assert body["linked_callsigns"][0]["new_callsign"] == "N0CALL"
 
     link = db_session.query(LinkedCallsigns).one()
     assert link.user_id == user.id
@@ -220,6 +225,7 @@ def test_get_qsos_by_user_returns_area_and_region_totals(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert body["callsign"] == "4Z1ABC"
+    assert body["callsigns"] == ["4Z1ABC"]
     assert set(body["areas"]) == {"H08HF", "J05HF", "A22BS"}
     assert set(body["regions"]) == {"HF", "BS"}
     assert body["total_areas"] == 3
@@ -267,6 +273,7 @@ def test_get_qsos_by_user_counts_linked_callsigns_once(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert body["callsign"] == "N0CALL"
+    assert set(body["callsigns"]) == {"4Z1ABC", "N0CALL"}
     assert set(body["areas"]) == {"H08HF", "A22BS"}
     assert set(body["regions"]) == {"HF", "BS"}
     assert body["total_areas"] == 2

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 import os
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
