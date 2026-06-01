@@ -20,6 +20,43 @@ if not CLERK_SECRET_KEY.startswith(("sk_test_", "sk_live_")):
 
 clerk = Clerk(bearer_auth=CLERK_SECRET_KEY)
 
+DEFAULT_FRONTEND_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
+
+
+def _add_origin(origins: list[str], origin: str) -> None:
+    normalized_origin = origin.strip().rstrip("/")
+    if normalized_origin and normalized_origin not in origins:
+        origins.append(normalized_origin)
+
+
+def _get_loopback_alias(origin: str) -> str | None:
+    parsed_origin = urlsplit(origin)
+    if parsed_origin.hostname not in {"localhost", "127.0.0.1"}:
+        return None
+
+    alias_host = "127.0.0.1" if parsed_origin.hostname == "localhost" else "localhost"
+    alias_netloc = alias_host
+    if parsed_origin.port:
+        alias_netloc = f"{alias_netloc}:{parsed_origin.port}"
+
+    return urlunsplit((parsed_origin.scheme, alias_netloc, "", "", ""))
+
+
+def get_frontend_origins() -> list[str]:
+    origins: list[str] = []
+    for configured_origins in (os.getenv("FRONTEND_URL"), os.getenv("FRONTEND_ORIGINS")):
+        if not configured_origins:
+            continue
+        for origin in configured_origins.split(","):
+            _add_origin(origins, origin)
+
+    for origin in list(origins):
+        loopback_alias = _get_loopback_alias(origin)
+        if loopback_alias:
+            _add_origin(origins, loopback_alias)
+
+    return origins or list(DEFAULT_FRONTEND_ORIGINS)
+
 
 async def get_or_create_user_from_clerk(db: Session, clerk_user_id: str):
     """
@@ -90,11 +127,9 @@ async def verify_clerk_session(request: Request):
     try:
         # Pass the raw FastAPI request object to Clerk's authentication method.
         # This handles parsing the Authorization header and verifying the JWT.
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-
         session = clerk.authenticate_request(
             request,
-            AuthenticateRequestOptions(authorized_parties=[frontend_url]),
+            AuthenticateRequestOptions(authorized_parties=get_frontend_origins()),
         )
 
         # The session object contains all the user and session data

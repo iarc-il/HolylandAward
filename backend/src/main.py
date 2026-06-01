@@ -13,11 +13,11 @@ from users.router import router as users_router
 from qsos.router import router as qsos_router
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-from utils import verify_clerk_session
+from utils import get_frontend_origins, verify_clerk_session
 
 from lifespan import lifespan
 
-origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+origins = get_frontend_origins()
 
 
 app = FastAPI(lifespan=lifespan)
