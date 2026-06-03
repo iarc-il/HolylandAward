@@ -6,6 +6,7 @@ type QSO = {
   id?: number;
   date: string;
   freq: number;
+  spotter: string;
   dx: string;
   area: string;
 };

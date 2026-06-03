@@ -7,6 +7,7 @@ type QSO = {
   id?: number;
   date: string;
   freq: number;
+  spotter: string;
   dx: string;
   area: string;
 };
@@ -176,6 +177,9 @@ const FileUploader = () => {
                         Frequency
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
+                        Callsign
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
                         DX Station
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
@@ -189,6 +193,9 @@ const FileUploader = () => {
                         <td className="px-4 py-3 text-sm">{qso.date}</td>
                         <td className="px-4 py-3 text-sm">
                           {qso.freq.toFixed(3)} MHz
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {qso.spotter}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium">
                           {qso.dx}
