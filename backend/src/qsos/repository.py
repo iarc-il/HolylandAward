@@ -39,6 +39,19 @@ def get_qsos_by_spotter(db: Session, spotter: str) -> list[QSOResponse]:
     return [QSOResponse.model_validate(qso) for qso in qso_records]
 
 
+def get_qsos_by_spotters(db: Session, spotters: list[str]) -> list[QSOResponse]:
+    if not spotters:
+        return []
+
+    qso_records = (
+        db.query(QSOLogs)
+        .filter(QSOLogs.spotter.in_(spotters))
+        .order_by(QSOLogs.date.desc(), QSOLogs.id.desc())
+        .all()
+    )
+    return [QSOResponse.model_validate(qso) for qso in qso_records]
+
+
 def get_areas_by_spotter(db: Session, spotter: str) -> list[str]:
     """Get all areas for a specific spotter."""
     stmt = select(QSOLogs.area).where(QSOLogs.spotter == spotter).distinct()

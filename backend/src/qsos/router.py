@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from utils import verify_clerk_session
 from users.repository import get_callsigns_for_user, get_user_by_clerk_id
-from qsos.repository import get_areas_by_spotters
+from qsos.repository import get_areas_by_spotters, get_qsos_by_spotters
 from qsos.service import get_regions_from_areas
 
 router = APIRouter(prefix="/qsos", tags=["qsos"])
@@ -39,4 +39,37 @@ def get_user_areas_and_regions(
         "regions": regions,
         "total_areas": len(areas),
         "total_regions": len(regions),
+    }
+
+
+@router.get("/by-user/logs")
+def get_user_qso_logs(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    user = get_user_by_clerk_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not user.callsign:
+        raise HTTPException(status_code=400, detail="User has no callsign assigned")
+
+    callsigns = get_callsigns_for_user(db, user)
+    qsos = get_qsos_by_spotters(db, callsigns)
+
+    return {
+        "callsign": user.callsign,
+        "callsigns": callsigns,
+        "total_qsos": len(qsos),
+        "qsos": [
+            {
+                "id": qso.id,
+                "date": qso.date,
+                "freq": qso.freq,
+                "spotter": qso.spotter,
+                "dx": qso.dx,
+                "area": qso.area,
+            }
+            for qso in qsos
+        ],
     }

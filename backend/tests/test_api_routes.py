@@ -296,6 +296,84 @@ def test_get_qsos_by_user_requires_callsign(client, db_session):
     assert response.json() == {"detail": "User has no callsign assigned"}
 
 
+def test_get_qso_logs_by_user_returns_current_and_linked_callsign_qsos(
+    client, db_session
+):
+    user = create_user(db_session, callsign="N0CALL", region=1)
+    db_session.add(
+        LinkedCallsigns(
+            user_id=user.id,
+            old_callsign="4Z1ABC",
+            new_callsign="N0CALL",
+        )
+    )
+    old_callsign_qso = QSOLogs(
+        date="20240101",
+        freq=14.25,
+        spotter="4Z1ABC",
+        dx="W1ABC",
+        area="H08HF",
+    )
+    current_callsign_qso = QSOLogs(
+        date="20240103",
+        freq=21.3,
+        spotter="N0CALL",
+        dx="W3ABC",
+        area="A22BS",
+    )
+    unrelated_qso = QSOLogs(
+        date="20240104",
+        freq=7.1,
+        spotter="W9XYZ",
+        dx="W4ABC",
+        area="J05HF",
+    )
+    db_session.add_all([old_callsign_qso, current_callsign_qso, unrelated_qso])
+    db_session.commit()
+
+    response = client.get("/qsos/by-user/logs")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["callsign"] == "N0CALL"
+    assert set(body["callsigns"]) == {"4Z1ABC", "N0CALL"}
+    assert body["total_qsos"] == 2
+    assert body["qsos"] == [
+        {
+            "id": current_callsign_qso.id,
+            "date": "20240103",
+            "freq": 21.3,
+            "spotter": "N0CALL",
+            "dx": "W3ABC",
+            "area": "A22BS",
+        },
+        {
+            "id": old_callsign_qso.id,
+            "date": "20240101",
+            "freq": 14.25,
+            "spotter": "4Z1ABC",
+            "dx": "W1ABC",
+            "area": "H08HF",
+        },
+    ]
+
+
+def test_get_qso_logs_by_user_returns_404_for_missing_user(client):
+    response = client.get("/qsos/by-user/logs")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+
+def test_get_qso_logs_by_user_requires_callsign(client, db_session):
+    create_user(db_session, callsign=None, region=1)
+
+    response = client.get("/qsos/by-user/logs")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "User has no callsign assigned"}
+
+
 def test_get_areas_returns_distinct_areas_for_spotter(client, db_session):
     create_user(db_session, callsign="4Z1ABC", region=1)
     db_session.add_all(
