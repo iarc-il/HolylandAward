@@ -1,5 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
+import {
+  USER_AREAS_REGIONS_QUERY_KEY,
+  USER_QSOS_QUERY_KEY,
+} from "@/api/queryKeys";
 import { apiClient } from "@/lib/api";
 
 type QSO = {
@@ -29,6 +33,7 @@ const postAdif = async (file: File, token: string): Promise<UploadResponse> => {
 
 const useAdifUpload = () => {
   const { getToken } = useAuth();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ file }: { file: File }) => {
@@ -37,6 +42,10 @@ const useAdifUpload = () => {
         throw new Error("Authentication required");
       }
       return postAdif(file, token);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: USER_AREAS_REGIONS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_QSOS_QUERY_KEY });
     },
   });
 };
