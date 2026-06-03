@@ -15,6 +15,7 @@ import {
 import {
   Home,
   Upload,
+  Radio,
   FileText,
   Settings,
   LogOut,
@@ -35,6 +36,11 @@ const items = [
     title: "Upload ADIF",
     url: "/upload",
     icon: Upload,
+  },
+  {
+    title: "My QSOs",
+    url: "/my-qsos",
+    icon: Radio,
   },
   {
     title: "Rules & Info",

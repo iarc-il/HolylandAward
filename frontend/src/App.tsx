@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import WelcomePage from "./components/WelcomePage";
 import RulesPage from "./components/RulesPage";
 import SettingsPage from "./components/SettingsPage";
+import MyQsosPage from "./components/MyQsosPage";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => {
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/upload" element={<UploadPage />} />
+                      <Route path="/my-qsos" element={<MyQsosPage />} />
                       <Route path="/rules" element={<RulesPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
                     </Routes>
