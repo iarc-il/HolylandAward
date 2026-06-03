@@ -11,6 +11,8 @@ import WelcomePage from "./components/WelcomePage";
 import RulesPage from "./components/RulesPage";
 import SettingsPage from "./components/SettingsPage";
 import MyQsosPage from "./components/MyQsosPage";
+import AdminPage from "./components/AdminPage";
+import RequireAdmin from "./components/RequireAdmin";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +61,14 @@ const App = () => {
                       <Route path="/my-qsos" element={<MyQsosPage />} />
                       <Route path="/rules" element={<RulesPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
+                      <Route
+                        path="/admin"
+                        element={
+                          <RequireAdmin>
+                            <AdminPage />
+                          </RequireAdmin>
+                        }
+                      />
                     </Routes>
                   </div>
                 </main>

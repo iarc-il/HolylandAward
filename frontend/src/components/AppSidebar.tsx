@@ -20,10 +20,12 @@ import {
   Settings,
   LogOut,
   Mail,
+  ShieldCheck,
 } from "lucide-react";
 import { SignOutButton } from "@clerk/clerk-react";
 import ContactDialog from "./ContactDialog";
 import logo from "@/assets/logo.svg";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 // Menu items for the sidebar
 const items = [
@@ -54,8 +56,16 @@ const items = [
   },
 ];
 
+const adminItem = {
+  title: "Admin",
+  url: "/admin",
+  icon: ShieldCheck,
+};
+
 const AppSidebar = () => {
   const [showContactDialog, setShowContactDialog] = useState(false);
+  const { isAdmin } = useIsAdmin();
+  const visibleItems = isAdmin ? [...items, adminItem] : items;
 
   return (
     <Sidebar>
@@ -72,7 +82,7 @@ const AppSidebar = () => {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <Link to={item.url} className="transition-all duration-200">
