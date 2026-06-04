@@ -32,7 +32,12 @@ const Dashboard = () => {
   const [regionsDialogOpen, setRegionsDialogOpen] = useState(false);
   const [allowClose, setAllowClose] = useState(false);
 
-  const { profile, isProfileComplete, isLoading } = useProfile();
+  const {
+    profile,
+    isProfileComplete,
+    isLoading,
+    isError: isProfileError,
+  } = useProfile();
   const {
     data: userAreasData,
     isLoading: areasLoading,
@@ -41,6 +46,8 @@ const Dashboard = () => {
 
   const requiredAmounts = getRequiredAmounts(profile?.region);
   const countedCallsigns = userAreasData?.callsigns ?? [];
+  const shouldRequireProfile =
+    !isLoading && !isProfileError && !isProfileComplete;
 
   // Check if all requirements are met
   const areasComplete =
@@ -61,15 +68,13 @@ const Dashboard = () => {
 
   // Automatically prompt user to complete profile if incomplete
   useEffect(() => {
-    // Wait for profile to load, then check if it's complete
-    if (!isLoading && !isProfileComplete) {
+    if (shouldRequireProfile) {
       setIsDialogOpen(true);
     }
-  }, [isLoading, isProfileComplete]);
+  }, [shouldRequireProfile]);
 
   const handleDialogClose = () => {
-    // Only allow closing if profile is complete or explicitly allowed
-    if (!isProfileComplete && !allowClose) {
+    if (shouldRequireProfile && !allowClose) {
       toast.warning("Profile Required", {
         description: "Please complete your profile to continue.",
         duration: 3000,
