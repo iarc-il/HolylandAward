@@ -338,6 +338,9 @@ def test_get_qso_logs_by_user_returns_current_and_linked_callsign_qsos(
     assert body["callsign"] == "N0CALL"
     assert set(body["callsigns"]) == {"4Z1ABC", "N0CALL"}
     assert body["total_qsos"] == 2
+    assert body["page"] == 1
+    assert body["page_size"] == 50
+    assert body["total_pages"] == 1
     assert body["qsos"] == [
         {
             "id": current_callsign_qso.id,
@@ -356,6 +359,53 @@ def test_get_qso_logs_by_user_returns_current_and_linked_callsign_qsos(
             "area": "H08HF",
         },
     ]
+
+
+def test_get_qso_logs_by_user_paginates_qsos(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    db_session.add_all(
+        [
+            QSOLogs(
+                date=f"202401{i:02d}",
+                freq=14.25,
+                spotter="4Z1ABC",
+                dx=f"W{i}ABC",
+                area=f"A{i:02d}HF",
+            )
+            for i in range(1, 52)
+        ]
+    )
+    db_session.commit()
+
+    first_page_response = client.get("/qsos/by-user/logs")
+    second_page_response = client.get("/qsos/by-user/logs?page=2&page_size=50")
+
+    assert first_page_response.status_code == 200
+    first_page = first_page_response.json()
+    assert first_page["total_qsos"] == 51
+    assert first_page["page"] == 1
+    assert first_page["page_size"] == 50
+    assert first_page["total_pages"] == 2
+    assert len(first_page["qsos"]) == 50
+    assert first_page["qsos"][0]["date"] == "20240151"
+    assert first_page["qsos"][-1]["date"] == "20240102"
+
+    assert second_page_response.status_code == 200
+    second_page = second_page_response.json()
+    assert second_page["total_qsos"] == 51
+    assert second_page["page"] == 2
+    assert second_page["page_size"] == 50
+    assert second_page["total_pages"] == 2
+    assert len(second_page["qsos"]) == 1
+    assert second_page["qsos"][0]["date"] == "20240101"
+
+
+def test_get_qso_logs_by_user_rejects_too_large_page_size(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+
+    response = client.get("/qsos/by-user/logs?page_size=101")
+
+    assert response.status_code == 422
 
 
 def test_get_qso_logs_by_user_returns_404_for_missing_user(client):

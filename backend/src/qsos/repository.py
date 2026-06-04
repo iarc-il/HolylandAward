@@ -39,16 +39,31 @@ def get_qsos_by_spotter(db: Session, spotter: str) -> list[QSOResponse]:
     return [QSOResponse.model_validate(qso) for qso in qso_records]
 
 
-def get_qsos_by_spotters(db: Session, spotters: list[str]) -> list[QSOResponse]:
+def count_qsos_by_spotters(db: Session, spotters: list[str]) -> int:
+    if not spotters:
+        return 0
+
+    return db.query(QSOLogs).filter(QSOLogs.spotter.in_(spotters)).count()
+
+
+def get_qsos_by_spotters(
+    db: Session, spotters: list[str], limit: int | None = None, offset: int = 0
+) -> list[QSOResponse]:
     if not spotters:
         return []
 
-    qso_records = (
+    query = (
         db.query(QSOLogs)
         .filter(QSOLogs.spotter.in_(spotters))
         .order_by(QSOLogs.date.desc(), QSOLogs.id.desc())
-        .all()
     )
+
+    if offset:
+        query = query.offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+
+    qso_records = query.all()
     return [QSOResponse.model_validate(qso) for qso in qso_records]
 
 
