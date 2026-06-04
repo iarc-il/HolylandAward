@@ -1,10 +1,64 @@
 import { useUserQsos } from "@/api/useUserQsos";
+import { Button } from "@/components/ui/button";
 import QsoTable from "@/components/QsoTable";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router";
+
+const QSO_PAGE_SIZE = 50;
+
+const getPageFromSearchParams = (searchParams: URLSearchParams) => {
+  const page = Number.parseInt(searchParams.get("page") ?? "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
+};
 
 const MyQsosPage = () => {
-  const { data, isLoading, isError, error } = useUserQsos();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = getPageFromSearchParams(searchParams);
+  const { data, isLoading, isError, error } = useUserQsos(
+    page,
+    QSO_PAGE_SIZE,
+  );
   const errorMessage =
     error instanceof Error ? error.message : "Could not load your QSOs.";
+  const totalPages = data?.total_pages ?? 0;
+  const pageQsoStart =
+    data && data.total_qsos > 0 && data.qsos.length > 0
+      ? (data.page - 1) * data.page_size + 1
+      : 0;
+  const pageQsoEnd = data
+    ? Math.min(data.page * data.page_size, data.total_qsos)
+    : 0;
+
+  useEffect(() => {
+    if (!data) return;
+
+    const nextPage =
+      data.total_pages > 0 && page > data.total_pages
+        ? data.total_pages
+        : data.total_pages === 0 && page > 1
+          ? 1
+          : null;
+
+    if (!nextPage) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (nextPage === 1) {
+      nextSearchParams.delete("page");
+    } else {
+      nextSearchParams.set("page", String(nextPage));
+    }
+    setSearchParams(nextSearchParams);
+  }, [data, page, searchParams, setSearchParams]);
+
+  const handlePageChange = (nextPage: number) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (nextPage === 1) {
+      nextSearchParams.delete("page");
+    } else {
+      nextSearchParams.set("page", String(nextPage));
+    }
+    setSearchParams(nextSearchParams);
+  };
 
   return (
     <div className="container mx-auto max-w-5xl">
@@ -61,6 +115,37 @@ const MyQsosPage = () => {
               qsos={data?.qsos ?? []}
               emptyMessage="No QSOs found. Upload an ADIF file to get started."
             />
+
+            {totalPages > 1 && (
+              <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-md sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing {pageQsoStart}-{pageQsoEnd} of {data?.total_qsos ?? 0} QSOs
+                </p>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm font-medium text-foreground">
+                    Page {data?.page ?? page} of {totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page >= totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
