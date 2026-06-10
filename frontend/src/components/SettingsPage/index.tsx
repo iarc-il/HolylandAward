@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,7 +12,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useProfile } from "@/api/useProfile";
+import {
+  useMyCallsignRequests,
+  useCreateCallsignRequest,
+  useUpdateRegion,
+} from "@/api/useCallsignRequests";
 
 const regionOptions = [
   { value: "0", label: "Israel" },
@@ -63,15 +76,26 @@ const SettingsPage = () => {
     isLoading,
     isError,
     error,
-    updateProfileAsync,
-    isUpdating,
   } = useProfile();
+
+  const { data: myRequests } = useMyCallsignRequests();
+  const createRequest = useCreateCallsignRequest();
+  const updateRegion = useUpdateRegion();
+
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingFormData, setPendingFormData] =
+    useState<ProfileSettingsFormData | null>(null);
+
+  const pendingRequest = myRequests?.find(
+    (r) => r.status === "pending",
+  );
 
   const {
     control,
     handleSubmit,
     register,
     reset,
+    watch,
     formState: { errors, isDirty },
   } = useForm<ProfileSettingsFormData>({
     resolver: zodResolver(profileSettingsSchema),
@@ -80,6 +104,8 @@ const SettingsPage = () => {
       region: undefined,
     },
   });
+
+  const currentCallsign = watch("callsign");
   const linkedCallsigns = profile?.linked_callsigns ?? [];
 
   useEffect(() => {
@@ -90,24 +116,78 @@ const SettingsPage = () => {
   }, [profile?.callsign, profile?.region, reset]);
 
   const onSubmit = async (data: ProfileSettingsFormData) => {
+    const callsignChanged =
+      data.callsign !== (profile?.callsign ?? "");
+    const regionChanged =
+      data.region !== getRegionFormValue(profile?.region);
+
+    if (!callsignChanged && !regionChanged) return;
+
+    if (callsignChanged) {
+      setPendingFormData(data);
+      setShowConfirmDialog(true);
+    } else {
+      try {
+        await updateRegion.mutateAsync(data.region);
+        reset({
+          callsign: profile?.callsign ?? "",
+          region: data.region,
+        });
+        toast.success("Region updated", {
+          description: "Your region has been saved.",
+        });
+      } catch (submitError) {
+        toast.error("Could not update region", {
+          description:
+            submitError instanceof Error
+              ? submitError.message
+              : "Please try again.",
+        });
+      }
+    }
+  };
+
+  const confirmCallsignChange = async () => {
+    if (!pendingFormData) return;
+    setShowConfirmDialog(false);
+
     try {
-      const updatedProfile = await updateProfileAsync(data);
+      await createRequest.mutateAsync(pendingFormData.callsign);
 
       reset({
-        callsign: updatedProfile.callsign ?? "",
-        region: getRegionFormValue(updatedProfile.region),
+        callsign: profile?.callsign ?? "",
+        region: getRegionFormValue(profile?.region),
       });
 
-      toast.success("Profile updated", {
-        description: "Your callsign and region have been saved.",
+      toast.success("Request submitted", {
+        description:
+          "Your callsign change request has been sent to the admins for review.",
       });
     } catch (submitError) {
-      toast.error("Could not update profile", {
+      toast.error("Could not submit request", {
         description:
-          submitError instanceof Error ? submitError.message : "Please try again.",
+          submitError instanceof Error
+            ? submitError.message
+            : "Please try again.",
       });
     }
   };
+
+  const statusBadge = () => {
+    if (!pendingRequest) return null;
+    return (
+      <div className="rounded-lg border border-amber-400/40 bg-amber-50 p-4 text-sm text-amber-800">
+        <p className="font-medium">Pending Callsign Change Request</p>
+        <p className="mt-1">
+          Changing from <strong>{pendingRequest.old_callsign}</strong> to{" "}
+          <strong>{pendingRequest.new_callsign}</strong> &mdash; awaiting admin
+          approval.
+        </p>
+      </div>
+    );
+  };
+
+  const recentRequests = myRequests?.filter((r) => r.status !== "pending") ?? [];
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -133,6 +213,8 @@ const SettingsPage = () => {
           </div>
         )}
 
+        {statusBadge()}
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
             <label htmlFor="callsign" className="text-sm font-medium">
@@ -142,13 +224,18 @@ const SettingsPage = () => {
               id="callsign"
               {...register("callsign")}
               className="uppercase"
-              disabled={isLoading || isUpdating}
+              disabled={isLoading || createRequest.isPending || !!pendingRequest}
               maxLength={10}
               placeholder="4Z1ABC"
             />
             {errors.callsign && (
               <p className="text-sm text-destructive">
                 {errors.callsign.message}
+              </p>
+            )}
+            {pendingRequest && (
+              <p className="text-xs text-muted-foreground">
+                Callsign changes are disabled while a request is pending.
               </p>
             )}
           </div>
@@ -165,7 +252,7 @@ const SettingsPage = () => {
                   key={field.value ?? "empty-region"}
                   value={field.value}
                   onValueChange={field.onChange}
-                  disabled={isLoading || isUpdating}
+                  disabled={isLoading || updateRegion.isPending}
                 >
                   <SelectTrigger id="region" className="w-full">
                     <SelectValue placeholder="Select region" />
@@ -181,7 +268,9 @@ const SettingsPage = () => {
               )}
             />
             {errors.region && (
-              <p className="text-sm text-destructive">{errors.region.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.region.message}
+              </p>
             )}
           </div>
 
@@ -195,12 +284,23 @@ const SettingsPage = () => {
                   region: getRegionFormValue(profile?.region),
                 })
               }
-              disabled={isLoading || isUpdating || !isDirty}
+              disabled={isLoading || !isDirty}
             >
               Reset
             </Button>
-            <Button type="submit" disabled={isLoading || isUpdating || !isDirty}>
-              {isUpdating ? "Saving..." : "Save Changes"}
+            <Button
+              type="submit"
+              disabled={
+                isLoading ||
+                createRequest.isPending ||
+                updateRegion.isPending ||
+                !isDirty ||
+                !!pendingRequest
+              }
+            >
+              {createRequest.isPending || updateRegion.isPending
+                ? "Saving..."
+                : "Save Changes"}
             </Button>
           </div>
         </form>
@@ -218,9 +318,13 @@ const SettingsPage = () => {
                   key={link.id}
                   className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm"
                 >
-                  <span className="font-medium uppercase">{link.old_callsign}</span>
-                  <span className="text-muted-foreground">-&gt;</span>
-                  <span className="font-medium uppercase">{link.new_callsign}</span>
+                  <span className="font-medium uppercase">
+                    {link.old_callsign}
+                  </span>
+                  <span className="text-muted-foreground">&rarr;</span>
+                  <span className="font-medium uppercase">
+                    {link.new_callsign}
+                  </span>
                 </div>
               ))}
             </div>
@@ -230,7 +334,82 @@ const SettingsPage = () => {
             </p>
           )}
         </div>
+
+        {recentRequests.length > 0 && (
+          <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4">
+            <h3 className="text-lg font-semibold">Previous Requests</h3>
+            <div className="mt-4 space-y-2">
+              {recentRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    {req.old_callsign && (
+                      <>
+                        <span className="font-medium uppercase">
+                          {req.old_callsign}
+                        </span>
+                        <span className="text-muted-foreground">&rarr;</span>
+                      </>
+                    )}
+                    <span className="font-medium uppercase">
+                      {req.new_callsign}
+                    </span>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      req.status === "approved"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {req.status === "approved" ? "Approved" : "Denied"}
+                    {req.reason ? `: ${req.reason}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
+
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Callsign Change</DialogTitle>
+            <DialogDescription>
+              Your callsign change request will be sent to the admins for review.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <div className="flex items-center justify-center gap-3 text-lg">
+              {profile?.callsign && (
+                <>
+                  <span className="font-bold uppercase">{profile.callsign}</span>
+                  <span className="text-muted-foreground">&rarr;</span>
+                </>
+              )}
+              <span className="font-bold uppercase">
+                {pendingFormData?.callsign}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmCallsignChange}>
+              Send Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

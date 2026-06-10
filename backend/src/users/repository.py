@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from users.models import LinkedCallsigns, Users
-from typing import Optional
+from users.models import CallsignChangeRequest, LinkedCallsigns, Users
+from typing import Optional, List
 
 
 def create_user(
@@ -104,3 +104,80 @@ def update_user_profile(
         db.commit()
         db.refresh(user)
     return user
+
+
+def update_user_region(
+    db: Session, clerk_user_id: str, region: int
+) -> Optional[Users]:
+    user = get_user_by_clerk_id(db, clerk_user_id)
+    if user:
+        user.region = region
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def create_callsign_request(
+    db: Session, user_id: int, old_callsign: Optional[str], new_callsign: str
+) -> CallsignChangeRequest:
+    request = CallsignChangeRequest(
+        user_id=user_id,
+        old_callsign=old_callsign,
+        new_callsign=new_callsign,
+        status="pending",
+    )
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+def get_pending_callsign_requests(db: Session) -> List[CallsignChangeRequest]:
+    return (
+        db.query(CallsignChangeRequest)
+        .filter(CallsignChangeRequest.status == "pending")
+        .order_by(CallsignChangeRequest.created_at.asc())
+        .all()
+    )
+
+
+def get_callsign_requests_for_user(
+    db: Session, user_id: int
+) -> List[CallsignChangeRequest]:
+    return (
+        db.query(CallsignChangeRequest)
+        .filter(CallsignChangeRequest.user_id == user_id)
+        .order_by(CallsignChangeRequest.created_at.desc())
+        .all()
+    )
+
+
+def get_callsign_request_by_id(
+    db: Session, request_id: int
+) -> Optional[CallsignChangeRequest]:
+    return (
+        db.query(CallsignChangeRequest)
+        .filter(CallsignChangeRequest.id == request_id)
+        .first()
+    )
+
+
+def approve_callsign_request(
+    db: Session, request: CallsignChangeRequest, admin_id: int
+) -> CallsignChangeRequest:
+    request.status = "approved"
+    request.admin_id = admin_id
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+def deny_callsign_request(
+    db: Session, request: CallsignChangeRequest, admin_id: int, reason: Optional[str] = None
+) -> CallsignChangeRequest:
+    request.status = "denied"
+    request.admin_id = admin_id
+    request.reason = reason
+    db.commit()
+    db.refresh(request)
+    return request

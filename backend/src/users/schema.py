@@ -28,3 +28,30 @@ class UserResponse(BaseModel):
     callsign: Optional[str]
     region: Optional[int]
     linked_callsigns: list[LinkedCallsignResponse] = Field(default_factory=list)
+
+
+class RegionUpdateRequest(BaseModel):
+    region: int = Field(ge=0, lt=4)
+
+
+class CallsignChangeRequestCreate(BaseModel):
+    callsign: str
+
+
+class CallsignChangeRequestResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    old_callsign: Optional[str]
+    new_callsign: str
+    status: str
+    reason: Optional[str]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    user_callsign: Optional[str] = None
+    user_email: Optional[str] = None
+
+
+class CallsignChangeRequestAction(BaseModel):
+    reason: Optional[str] = None
