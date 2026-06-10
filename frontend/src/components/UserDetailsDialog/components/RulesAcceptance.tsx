@@ -1,12 +1,13 @@
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
+import { UserDetailsFormData } from "..";
 
 interface RulesAcceptanceProps {
-  register: UseFormRegister<any>;
+  register: UseFormRegister<UserDetailsFormData>;
   onCheckedChange: (checked: boolean) => void;
   onShowRules: () => void;
-  errors: FieldErrors;
+  errors: FieldErrors<UserDetailsFormData>;
 }
 
 const RulesAcceptance: React.FC<RulesAcceptanceProps> = ({

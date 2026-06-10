@@ -37,7 +37,7 @@ export const apiClient = {
     return this.fetch(endpoint, { method: 'GET', headers });
   },
 
-  async post(endpoint: string, data?: any, headers?: HeadersInit) {
+  async post(endpoint: string, data?: Record<string, unknown>, headers?: HeadersInit) {
     return this.fetch(endpoint, {
       method: 'POST',
       headers,
@@ -45,7 +45,7 @@ export const apiClient = {
     });
   },
 
-  async patch(endpoint: string, data?: any, headers?: HeadersInit) {
+  async patch(endpoint: string, data?: Record<string, unknown>, headers?: HeadersInit) {
     return this.fetch(endpoint, {
       method: 'PATCH',
       headers,
@@ -53,7 +53,7 @@ export const apiClient = {
     });
   },
 
-  async put(endpoint: string, data?: any, headers?: HeadersInit) {
+  async put(endpoint: string, data?: Record<string, unknown>, headers?: HeadersInit) {
     return this.fetch(endpoint, {
       method: 'PUT',
       headers,

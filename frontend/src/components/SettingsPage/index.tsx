@@ -95,7 +95,6 @@ const SettingsPage = () => {
     handleSubmit,
     register,
     reset,
-    watch,
     formState: { errors, isDirty },
   } = useForm<ProfileSettingsFormData>({
     resolver: zodResolver(profileSettingsSchema),
@@ -105,7 +104,6 @@ const SettingsPage = () => {
     },
   });
 
-  const currentCallsign = watch("callsign");
   const linkedCallsigns = profile?.linked_callsigns ?? [];
 
   useEffect(() => {

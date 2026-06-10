@@ -57,7 +57,7 @@ const userDetailsSchema = z
     path: ["callsignConfirm"],
   });
 
-type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
+export type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
 
 interface UserDetailsDialogProps {
   isOpen: boolean;
