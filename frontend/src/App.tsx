@@ -6,7 +6,7 @@ import bgImage from "@/assets/_2024_06_01_at_07_08_50_3ffe314f.jpg";
 import { BrowserRouter, Routes, Route } from "react-router";
 import UploadPage from "./components/UploadPage";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/sonner";
 import WelcomePage from "./components/WelcomePage";
 import RulesPage from "./components/RulesPage";
@@ -20,18 +20,10 @@ import { getApiBaseUrl } from "@/lib/api";
 
 const queryClient = new QueryClient();
 
-const SignedInApp = () => {
+const SignedInApp = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
   const { isLoaded, isAdmin } = useIsAdmin();
-  const [maintenanceMode, setMaintenanceMode] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    fetch(`${getApiBaseUrl()}/maintenance-mode`)
-      .then((res) => res.json())
-      .then((data) => setMaintenanceMode(data.maintenance_mode))
-      .catch(() => setMaintenanceMode(false));
-  }, []);
-
-  if (maintenanceMode === null || !isLoaded) {
+  if (!isLoaded) {
     return null;
   }
 
@@ -66,43 +58,83 @@ const SignedInApp = () => {
   );
 };
 
+const AppLayout = () => {
+  const [maintenanceMode, setMaintenanceMode] = useState<boolean | null>(null);
+  const { isSignedIn } = useAuth();
+
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/maintenance-mode`)
+      .then((res) => res.json())
+      .then((data) => setMaintenanceMode(data.maintenance_mode))
+      .catch(() => setMaintenanceMode(false));
+  }, [isSignedIn]);
+
+  if (maintenanceMode === null) {
+    return null;
+  }
+
+  if (maintenanceMode) {
+    return (
+      <div className="flex h-screen w-full relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
+          style={{
+            backgroundImage: `url(${bgImage})`,
+            filter: "blur(6px) brightness(1.1)",
+            opacity: 0.6,
+          }}
+        />
+        <div className="absolute inset-0 bg-background/80 pointer-events-none" />
+        <SignedOut>
+          <MaintenancePage showAdminSignIn />
+        </SignedOut>
+        <SignedIn>
+          <SignedInApp maintenanceMode={true} />
+        </SignedIn>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen w-full relative overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
+        style={{
+          backgroundImage: `url(${bgImage})`,
+          filter: "blur(6px) brightness(1.1)",
+          opacity: 0.6,
+        }}
+      />
+      <div className="absolute inset-0 bg-background/80 pointer-events-none" />
+
+      <SignedOut>
+        <Routes>
+          <Route
+            path="/rules"
+            element={
+              <div className="flex-1 h-screen flex flex-col items-center overflow-auto relative z-10">
+                <div className="max-w-4xl w-full mx-auto px-6 py-8">
+                  <RulesPage />
+                </div>
+              </div>
+            }
+          />
+          <Route path="*" element={<WelcomePage />} />
+        </Routes>
+      </SignedOut>
+      <SignedIn>
+        <SignedInApp maintenanceMode={false} />
+      </SignedIn>
+    </div>
+  );
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <SidebarProvider>
-          <div className="flex h-screen w-full relative overflow-hidden">
-            {/* Subtle background image */}
-            <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-              style={{
-                backgroundImage: `url(${bgImage})`,
-                filter: "blur(6px) brightness(1.1)",
-                opacity: 0.6,
-              }}
-            />
-            {/* White overlay for readability */}
-            <div className="absolute inset-0 bg-background/80 pointer-events-none" />
-
-            <SignedOut>
-              <Routes>
-                <Route
-                  path="/rules"
-                  element={
-                    <div className="flex-1 h-screen flex flex-col items-center overflow-auto relative z-10">
-                      <div className="max-w-4xl w-full mx-auto px-6 py-8">
-                        <RulesPage />
-                      </div>
-                    </div>
-                  }
-                />
-                <Route path="*" element={<WelcomePage />} />
-              </Routes>
-            </SignedOut>
-            <SignedIn>
-              <SignedInApp />
-            </SignedIn>
-          </div>
+          <AppLayout />
         </SidebarProvider>
         <Toaster />
       </BrowserRouter>
