@@ -118,41 +118,54 @@ async def get_or_create_user_from_clerk(db: Session, clerk_user_id: str):
         )
 
 
-# Define the authentication dependency
-async def verify_clerk_session(request: Request):
+async def authenticate_request(request: Request) -> str:
     """
-    Verifies the user's session using Clerk's SDK and returns the user ID.
-    Raises an HTTPException if the user is not authenticated.
+    Authenticate a request using Clerk and return the user ID.
+    Raises HTTPException(401) if authentication fails.
+    Can be used both as a dependency and in middleware.
     """
     try:
-        # Pass the raw FastAPI request object to Clerk's authentication method.
-        # This handles parsing the Authorization header and verifying the JWT.
         session = clerk.authenticate_request(
             request,
             AuthenticateRequestOptions(authorized_parties=get_frontend_origins()),
         )
-
-        # The session object contains all the user and session data
         if not session.is_signed_in:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated."
             )
-
-        # Return the user_id, which can be injected into the route handler
         user_id = session.payload.get("sub") if session.payload else None
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session."
             )
         return user_id
-
     except HTTPException:
-        # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        # Catch any exceptions during authentication and return a 401 error
         print(f"Authentication failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate credentials: {str(e)}",
         )
+
+
+async def verify_clerk_session(request: Request):
+    """
+    FastAPI dependency that verifies the user's session via Clerk
+    and returns the user ID.
+    """
+    return await authenticate_request(request)
+
+
+async def is_admin_user(user_id: str) -> bool:
+    """
+    Check if a Clerk user has admin role in their public metadata.
+    """
+    try:
+        clerk_user = clerk.users.get(user_id=user_id)
+        if not clerk_user:
+            return False
+        metadata = getattr(clerk_user, "public_metadata", {}) or {}
+        return metadata.get("role") == "admin"
+    except Exception:
+        return False

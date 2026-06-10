@@ -4,17 +4,21 @@ import os
 
 
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, status, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
 from adif_service import AdifService
-from database import get_db
+from database import get_db, SessionLocal
 from qsos.repository import insert_qsos, get_areas_by_spotter
 from qsos.schema import QSO
 from users.router import router as users_router
+from users.admin_router import router as admin_router
 from users.repository import get_callsigns_for_user
 from qsos.router import router as qsos_router
+from system_settings.router import router as system_settings_router
+from system_settings.repository import get_setting
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-from utils import get_frontend_origins, verify_clerk_session
+from utils import get_frontend_origins, verify_clerk_session, authenticate_request, is_admin_user
 
 from lifespan import lifespan
 
@@ -33,12 +37,45 @@ app.add_middleware(
 
 # Include routers
 app.include_router(users_router)
+app.include_router(admin_router)
 app.include_router(qsos_router)
+app.include_router(system_settings_router)
 
 bearer_scheme = HTTPBearer()
 
 # Webhook endpoint removed - users are now auto-created on first authentication
 # See utils.py::get_or_create_user_from_clerk() for the new pattern
+
+
+PUBLIC_PATHS = {"/", "/maintenance-mode", "/docs", "/openapi.json", "/favicon.ico"}
+
+
+@app.middleware("http")
+async def maintenance_mode_check(request: Request, call_next):
+    if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
+        return await call_next(request)
+
+    db = SessionLocal()
+    try:
+        maintenance = get_setting(db, "maintenance_mode")
+        if maintenance != "true":
+            return await call_next(request)
+
+        try:
+            user_id = await authenticate_request(request)
+            if not await is_admin_user(user_id):
+                return JSONResponse(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    content={"detail": "Site is under maintenance. Please try again later."},
+                )
+            return await call_next(request)
+        except Exception:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"detail": "Site is under maintenance. Please try again later."},
+            )
+    finally:
+        db.close()
 
 
 @app.get("/")

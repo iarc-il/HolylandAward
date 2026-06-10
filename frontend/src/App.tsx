@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "./components/AppSidebar";
 import Dashboard from "./components/Dashboard";
@@ -13,8 +14,57 @@ import SettingsPage from "./components/SettingsPage";
 import MyQsosPage from "./components/MyQsosPage";
 import AdminPage from "./components/AdminPage";
 import RequireAdmin from "./components/RequireAdmin";
+import MaintenancePage from "./components/MaintenancePage";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { getApiBaseUrl } from "@/lib/api";
 
 const queryClient = new QueryClient();
+
+const SignedInApp = () => {
+  const { isLoaded, isAdmin } = useIsAdmin();
+  const [maintenanceMode, setMaintenanceMode] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/maintenance-mode`)
+      .then((res) => res.json())
+      .then((data) => setMaintenanceMode(data.maintenance_mode))
+      .catch(() => setMaintenanceMode(false));
+  }, []);
+
+  if (maintenanceMode === null || !isLoaded) {
+    return null;
+  }
+
+  if (maintenanceMode && !isAdmin) {
+    return <MaintenancePage />;
+  }
+
+  return (
+    <div className="flex h-screen w-full relative z-10">
+      <AppSidebar />
+      <main className="flex-1 h-screen overflow-auto">
+        <div className="flex flex-1 flex-col gap-6 p-6 md:p-8 h-full">
+          <SidebarTrigger className="lg:hidden mb-2" />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/my-qsos" element={<MyQsosPage />} />
+            <Route path="/rules" element={<RulesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route
+              path="/admin"
+              element={
+                <RequireAdmin>
+                  <AdminPage />
+                </RequireAdmin>
+              }
+            />
+          </Routes>
+        </div>
+      </main>
+    </div>
+  );
+};
 
 const App = () => {
   return (
@@ -50,29 +100,7 @@ const App = () => {
               </Routes>
             </SignedOut>
             <SignedIn>
-              <div className="flex h-screen w-full relative z-10">
-                <AppSidebar />
-                <main className="flex-1 h-screen overflow-auto">
-                  <div className="flex flex-1 flex-col gap-6 p-6 md:p-8 h-full">
-                    <SidebarTrigger className="lg:hidden mb-2" />
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/upload" element={<UploadPage />} />
-                      <Route path="/my-qsos" element={<MyQsosPage />} />
-                      <Route path="/rules" element={<RulesPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route
-                        path="/admin"
-                        element={
-                          <RequireAdmin>
-                            <AdminPage />
-                          </RequireAdmin>
-                        }
-                      />
-                    </Routes>
-                  </div>
-                </main>
-              </div>
+              <SignedInApp />
             </SignedIn>
           </div>
         </SidebarProvider>
