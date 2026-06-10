@@ -169,3 +169,6 @@ async def is_admin_user(user_id: str) -> bool:
         return metadata.get("role") == "admin"
     except Exception:
         return False
+
+
+

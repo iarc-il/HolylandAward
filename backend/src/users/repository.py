@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from users.models import CallsignChangeRequest, LinkedCallsigns, Users
 from typing import Optional, List
@@ -137,6 +138,22 @@ def get_pending_callsign_requests(db: Session) -> List[CallsignChangeRequest]:
         db.query(CallsignChangeRequest)
         .filter(CallsignChangeRequest.status == "pending")
         .order_by(CallsignChangeRequest.created_at.asc())
+        .all()
+    )
+
+
+def search_users(db: Session, query: str) -> List[Users]:
+    pattern = f"%{query}%"
+    return (
+        db.query(Users)
+        .filter(
+            or_(
+                Users.callsign.ilike(pattern),
+                Users.email.ilike(pattern),
+                Users.username.ilike(pattern),
+            )
+        )
+        .order_by(Users.callsign.asc())
         .all()
     )
 
