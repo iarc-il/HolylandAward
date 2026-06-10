@@ -13,6 +13,22 @@ type QsoTableProps = {
   emptyMessage?: string;
 };
 
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return "";
+  const cleaned = dateStr.replace(/[^0-9]/g, "");
+  if (cleaned.length === 8) {
+    const y = cleaned.slice(0, 4);
+    const m = cleaned.slice(4, 6);
+    const d = cleaned.slice(6, 8);
+    return `${y}-${m}-${d}`;
+  }
+  const d = new Date(dateStr);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString("en-CA");
+  }
+  return dateStr;
+};
+
 const QsoTable = ({
   title,
   qsos,
@@ -60,7 +76,7 @@ const QsoTable = ({
                   key={qso.id || index}
                   className="hover:bg-accent/10 transition-colors"
                 >
-                  <td className="px-4 py-3 text-sm">{qso.date}</td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(qso.date)}</td>
                   <td className="px-4 py-3 text-sm">
                     {qso.freq.toFixed(3)} MHz
                   </td>
