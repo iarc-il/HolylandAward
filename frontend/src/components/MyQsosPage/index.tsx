@@ -1,23 +1,33 @@
 import { useUserQsos } from "@/api/useUserQsos";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import QsoTable from "@/components/QsoTable";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router";
 
-const QSO_PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 500];
 
 const getPageFromSearchParams = (searchParams: URLSearchParams) => {
   const page = Number.parseInt(searchParams.get("page") ?? "1", 10);
   return Number.isFinite(page) && page > 0 ? page : 1;
 };
 
+const getPageSizeFromSearchParams = (searchParams: URLSearchParams) => {
+  const pageSize = Number.parseInt(searchParams.get("pageSize") ?? "50", 10);
+  return PAGE_SIZE_OPTIONS.includes(pageSize) ? pageSize : 50;
+};
+
 const MyQsosPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = getPageFromSearchParams(searchParams);
-  const { data, isLoading, isError, error } = useUserQsos(
-    page,
-    QSO_PAGE_SIZE,
-  );
+  const pageSize = getPageSizeFromSearchParams(searchParams);
+  const { data, isLoading, isError, error } = useUserQsos(page, pageSize);
   const errorMessage =
     error instanceof Error ? error.message : "Could not load your QSOs.";
   const totalPages = data?.total_pages ?? 0;
@@ -56,6 +66,17 @@ const MyQsosPage = () => {
       nextSearchParams.delete("page");
     } else {
       nextSearchParams.set("page", String(nextPage));
+    }
+    setSearchParams(nextSearchParams);
+  };
+
+  const handlePageSizeChange = (newPageSize: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("page");
+    if (newPageSize !== "50") {
+      nextSearchParams.set("pageSize", newPageSize);
+    } else {
+      nextSearchParams.delete("pageSize");
     }
     setSearchParams(nextSearchParams);
   };
@@ -116,36 +137,60 @@ const MyQsosPage = () => {
               emptyMessage="No QSOs found. Upload an ADIF file to get started."
             />
 
-            {totalPages > 1 && (
-              <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-md sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Showing {pageQsoStart}-{pageQsoEnd} of {data?.total_qsos ?? 0} QSOs
-                </p>
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm font-medium text-foreground">
-                    Page {data?.page ?? page} of {totalPages}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page >= totalPages}
-                  >
-                    Next
-                  </Button>
+              {data && data.total_qsos > 0 && (
+                <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-md sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {pageQsoStart}-{pageQsoEnd} of {data.total_qsos} QSOs
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">
+                        Per page:
+                      </span>
+                      <Select
+                        value={String(pageSize)}
+                        onValueChange={handlePageSizeChange}
+                      >
+                        <SelectTrigger className="h-8 w-16">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAGE_SIZE_OPTIONS.map((size) => (
+                            <SelectItem key={size} value={String(size)}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {totalPages > 1 && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(page - 1)}
+                          disabled={page <= 1}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm font-medium text-foreground">
+                          Page {data.page} of {totalPages}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(page + 1)}
+                          disabled={page >= totalPages}
+                        >
+                          Next
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         )}
       </div>

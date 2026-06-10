@@ -51,7 +51,7 @@ def get_user_areas_and_regions(
 @router.get("/by-user/logs")
 def get_user_qso_logs(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=100),
+    page_size: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
