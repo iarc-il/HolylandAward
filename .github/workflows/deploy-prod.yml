@@ -1,0 +1,74 @@
+name: Build & Deploy Production
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+# Serialize production builds; never cancel a release mid-flight.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/holylandaward
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-and-push:
+    name: Build and push production images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # ── Backend ──────────────────────────────────────────────────────────
+      - name: Build and push backend (production)
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/backend:latest
+            ${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }}
+          cache-from: type=gha,scope=backend-prod
+          cache-to: type=gha,mode=max,scope=backend-prod
+
+      # ── Frontend ─────────────────────────────────────────────────────────
+      # VITE_ variables are baked into the static bundle at build time.
+      # Store them as GitHub Secrets (Settings → Secrets → Actions).
+      - name: Build and push frontend (production)
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/frontend:latest
+            ${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}
+          build-args: |
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            VITE_COMMIT_SHA=${{ github.sha }}
+          secrets: |
+            clerk_key=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+            maps_key=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          cache-from: type=gha,scope=frontend-prod
+          cache-to: type=gha,mode=max,scope=frontend-prod
+          # Portainer polls GHCR and redeploys automatically — no deploy job needed.

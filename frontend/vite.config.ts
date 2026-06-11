@@ -15,8 +15,16 @@ export default defineConfig({
   server: {
     host: true, // Listen on all addresses
     port: 5173,
+    allowedHosts: ["holylandaward.iarc.org"],
     watch: {
       usePolling: true, // Required for Docker on Windows/WSL
+    },
+    proxy: {
+      "/api": {
+        target: "http://backend:8000",
+        rewrite: (path) => path.replace(/^\/api/, ""),
+        changeOrigin: true,
+      },
     },
   },
 })

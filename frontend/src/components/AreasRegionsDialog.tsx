@@ -17,7 +17,7 @@ const AreasRegionsDialog = ({
 }: AreasRegionsDialogProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -38,7 +38,7 @@ const AreasRegionsDialog = ({
               {items.map((item, index) => (
                 <div
                   key={index}
-                  className="px-3 py-2 bg-muted rounded-md text-sm font-mono"
+                  className="px-3 py-2 bg-muted rounded-md text-base font-mono"
                 >
                   {item}
                 </div>
@@ -47,7 +47,7 @@ const AreasRegionsDialog = ({
           )}
         </div>
 
-        <div className="text-sm text-muted-foreground text-center">
+        <div className="text-base text-muted-foreground text-center">
           Total: {items.length}
         </div>
       </DialogContent>

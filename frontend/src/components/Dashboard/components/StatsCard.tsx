@@ -40,7 +40,7 @@ const StatsCard = ({
           <CheckCircle2 className="h-6 w-6 text-green-600 animate-in zoom-in duration-500" />
         </div>
       )}
-      <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+      <h3 className="font-semibold mb-3 text-xl flex items-center gap-2">
         {title}
         {isComplete && (
           <Sparkles className="h-4 w-4 text-yellow-500 animate-pulse" />
@@ -60,21 +60,21 @@ const StatsCard = ({
             >
               {current}
             </span>
-            <span className="text-lg text-muted-foreground">/</span>
-            <span className="text-lg font-semibold text-muted-foreground">
+            <span className="text-xl text-muted-foreground">/</span>
+            <span className="text-xl font-semibold text-muted-foreground">
               {total}
             </span>
           </div>
           <ProgressBar current={current} total={total} />
           {isComplete && (
-            <p className="text-sm font-medium text-green-600 mt-2">
+            <p className="text-base font-medium text-green-600 mt-2">
               ✓ Requirement met!
             </p>
           )}
         </div>
       )}
       {isClickable && !isLoading && !isError && !isComplete && (
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-2">
           Click to view {title.toLowerCase()}
         </p>
       )}

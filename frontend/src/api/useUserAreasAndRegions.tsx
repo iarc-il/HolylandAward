@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
 import { apiClient } from "../lib/api";
+import { queryKeys } from "../lib/queryKeys";
 
 interface UserAreasAndRegions {
   callsign: string;
@@ -14,7 +15,7 @@ export const useUserAreasAndRegions = () => {
   const { getToken } = useAuth();
 
   return useQuery<UserAreasAndRegions>({
-    queryKey: ["user-areas-regions"],
+    queryKey: queryKeys.userAreasAndRegions,
     queryFn: async () => {
       const token = await getToken();
       const response = await apiClient.get("/qsos/by-user", {

@@ -10,7 +10,7 @@ const RulesPage = () => {
   const { isSignedIn } = useAuth();
 
   return (
-    <div className="flex flex-col space-y-6 max-w-4xl pb-16">
+    <div className="flex flex-col space-y-6 max-w-4xl pb-16 mx-auto w-full">
       {/* Back button for non-authenticated users */}
       {!isSignedIn && (
         <Button
@@ -19,11 +19,11 @@ const RulesPage = () => {
           className="self-start -ml-2"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
+          Go Back
         </Button>
       )}
       
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">Award Information & Rules</h1>
           <p className="text-foreground">
@@ -32,7 +32,7 @@ const RulesPage = () => {
         </div>
         
         {/* Language Toggle */}
-        <div className="flex gap-2 items-center bg-card border border-border rounded-full p-1 shadow-sm">
+        <div className="flex gap-2 items-center bg-card border border-border rounded-full p-1 shadow-sm w-fit">
           <Button
             size="sm"
             variant={language === "en" ? "default" : "ghost"}
@@ -62,6 +62,30 @@ const RulesPage = () => {
 const EnglishContent = () => {
   return (
     <div className="p-6 bg-card border border-border rounded-xl shadow-md space-y-8">
+      {/* Introductory Section */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-semibold text-foreground text-center">The Holyland Award Program</h2>
+        <div className="space-y-4 text-foreground">
+          <p>
+            The Israel Amateur Radio Club congratulates you, and is very happy to have you among other Radio amateurs in the world, participating in the "Holyland Award" program since January 1992.
+          </p>
+          <p>
+            We are sure that while taking part in the program, you will feel that you are joining a guided journey throughout a landscape of historical significance. You will expand your geographical knowledge of the Holyland. The 'Squares' and places you contact will become more familiar to you, as you certainly have met or heard their names mentioned before. We are sure that as other participants, you will create friendship with many Radio amateurs taking part, and become well acquainted with the people of the country.
+          </p>
+          <p>
+            The beautiful Award will be the right completion for your participation, and we hope, will give you much pleasure and satisfaction.
+          </p>
+          <p>
+            We here, are making all efforts to increase the activity of radio amateurs in the country. We encourage mobile and portable operation, activate the "Holyland International DX contest" which became quickly, a well known and popular contest among Radio amateurs.
+          </p>
+          <p>
+            Finally, we wish you much success and pleasure in accumulating the Holyland Award
+          </p>
+        </div>
+      </section>
+
+      <hr className="border-border" />
+
       {/* Section 1 - Definition of a "Square" */}
       <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">Definition of a "Square"</h2>

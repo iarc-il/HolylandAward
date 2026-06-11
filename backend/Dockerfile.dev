@@ -1,4 +1,4 @@
-# Backend Dockerfile for HolylandAward
+# Development Dockerfile for backend with hot reload
 FROM python:3.13-slim
 
 # Set working directory
@@ -19,7 +19,7 @@ COPY pyproject.toml uv.toml ./
 # Install dependencies
 RUN uv pip install --system -r pyproject.toml
 
-# Copy application code
+# Copy application code (overridden by volume mount in docker-compose.yml)
 COPY . .
 
 # Set Python path
@@ -28,5 +28,5 @@ ENV PYTHONPATH=/app/src
 # Expose port
 EXPOSE 8000
 
-# Run migrations and start the application
-CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"]
+# Run migrations and start with hot reload
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"]

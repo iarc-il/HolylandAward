@@ -2,9 +2,63 @@
 
 This project is now fully dockerized for easy development and deployment.
 
+## CI/CD — Automated Image Builds (GitHub Actions)
+
+Two workflows automatically build and push Docker images to
+**GitHub Container Registry (GHCR)** whenever you push to a branch:
+
+| Branch | Workflow | Images pushed |
+|--------|----------|---------------|
+| `dev`  | `deploy-dev.yml`  | `backend:dev`, `frontend:dev` |
+| `main` | `deploy-prod.yml` | `backend:latest`, `frontend:latest` |
+
+Images are published to:
+```
+ghcr.io/iarc-il/holylandaward/backend:<tag>
+ghcr.io/iarc-il/holylandaward/frontend:<tag>
+```
+
+### Required GitHub Secrets
+
+Go to **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Description |
+|--------|-------------|
+| `VITE_API_BASE_URL` | Backend API URL baked into the production frontend bundle |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for the frontend |
+| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps API key for the frontend |
+
+> `GITHUB_TOKEN` is provided automatically — no action needed.
+
+### Running on a Server
+
+**Dev server** (pulls `:dev` images):
+```bash
+# First login to GHCR on the server
+echo $CR_PAT | docker login ghcr.io -u <github-username> --password-stdin
+
+# Pull latest dev images and start
+docker compose -f docker-compose.dev-server.yml pull
+docker compose -f docker-compose.dev-server.yml up -d
+```
+
+**Production server** (pulls `:latest` images):
+```bash
+# First login to GHCR on the server
+echo $CR_PAT | docker login ghcr.io -u <github-username> --password-stdin
+
+# Pull latest images and start
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+> `CR_PAT` is a GitHub Personal Access Token with `read:packages` scope.
+
+---
+
 ## Quick Start
 
-### Development
+### Local Development
 
 1. **Copy environment variables:**
    ```bash
@@ -28,12 +82,20 @@ This project is now fully dockerized for easy development and deployment.
    docker-compose up
    ```
 
-3. **Access the application:**
+4. **Access the application:**
    - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8000
-   - Database: localhost:5433
+   - Backend API: http://localhost:1293
+   - Database: localhost:5434
 
-### Production
+### VS Code Dev Container
+
+Open the project in VS Code and install the **Dev Containers** extension
+(`ms-vscode-remote.remote-containers`). Then use **"Reopen in Container"** from
+the Command Palette. VS Code will start all services via `docker-compose.yml` and
+attach directly to the backend container with Python and TypeScript tooling
+pre-configured.
+
+### Production (manual, without CI)
 
 ```bash
 docker-compose -f docker-compose.prod.yml up -d
@@ -102,23 +164,30 @@ docker-compose up --build backend
 
 ```
 .
-├── docker-compose.yml          # Development setup
-├── docker-compose.prod.yml     # Production setup
-├── .env.example                # Environment template
+├── .devcontainer/
+│   └── devcontainer.json           # VS Code / GitHub Codespaces dev container
+├── .github/workflows/
+│   ├── deploy-dev.yml              # CI: push to dev → :dev images on GHCR
+│   └── deploy-prod.yml             # CI: push to main → :latest images on GHCR
+├── docker-compose.yml              # Local development (volume mounts + hot reload)
+├── docker-compose.dev-server.yml   # Dev server (pulls :dev images from GHCR)
+├── docker-compose.prod.yml         # Production server (pulls :latest images from GHCR)
+├── .env.example                    # Environment template
 ├── backend/
-│   ├── Dockerfile              # Backend container
+│   ├── Dockerfile                  # Production backend image
+│   ├── Dockerfile.dev              # Development backend image (hot reload)
 │   └── .dockerignore
 └── frontend/
-    ├── Dockerfile              # Production frontend
-    ├── Dockerfile.dev          # Development frontend
-    ├── nginx.conf              # Production nginx config
+    ├── Dockerfile                  # Production frontend image (nginx + static build)
+    ├── Dockerfile.dev              # Development frontend image (Vite dev server)
+    ├── nginx.conf                  # Production nginx config
     └── .dockerignore
 ```
 
 ## Troubleshooting
 
 ### Port conflicts
-If ports 5173, 8000, or 5433 are in use:
+If ports 5173, 1293, or 5434 are in use:
 ```bash
 # Change ports in docker-compose.yml
 # Example: "3000:5173" instead of "5173:5173"
@@ -144,11 +213,17 @@ docker-compose up --build
 
 See `.env.example` for all required environment variables.
 
-### Required:
+### Required (all environments):
 - `CLERK_SECRET_KEY` - Clerk secret key
 - `CLERK_PUBLISHABLE_KEY` - Clerk publishable key
+
+### Required for production frontend (set as GitHub Secrets for CI):
+- `VITE_API_BASE_URL` - Backend API URL
+- `VITE_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
+- `VITE_GOOGLE_MAPS_API_KEY` - Google Maps API key
 
 ### Optional (have defaults):
 - `POSTGRES_USER` - Database user (default: holyland_user)
 - `POSTGRES_PASSWORD` - Database password (default: holyland_password)
 - `POSTGRES_DB` - Database name (default: holyland_award)
+

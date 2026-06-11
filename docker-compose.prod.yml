@@ -1,4 +1,11 @@
-version: '3.8'
+# docker-compose.prod.yml
+# Production stack. Pulls the pre-built :latest images from GHCR.
+# Served by Nginx Proxy Manager at https://holylandaward.iarc.org
+# (NPM forwards that host -> the frontend container :80; frontend nginx serves
+#  the SPA and proxies /api/* -> backend:8000).
+#
+# Reuses the EXISTING live DB volume (holyland_postgres_data) — no migration.
+# Verify the volume name on the server (docker volume ls) before first start. See DEPLOYMENT.md.
 
 services:
   # PostgreSQL Database
@@ -20,19 +27,15 @@ services:
       - holyland_network
     restart: always
 
-  # Backend API
+  # Backend API — pre-built image from GHCR
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-ghcr.io/iarc-il/holylandaward/backend:latest}
     container_name: holyland_backend_prod
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
-      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      # CORS origin — must be https://holylandaward.iarc.org in production.
       FRONTEND_URL: ${FRONTEND_URL}
-    ports:
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -40,27 +43,28 @@ services:
       - holyland_network
     restart: always
 
-  # Frontend (Production)
+  # Frontend (Production) — pre-built nginx image from GHCR.
+  # VITE_ variables are baked in at CI build time; no runtime envs needed.
+  # Nothing is published on the host — NPM reaches this container on :80 via nginx_proxy_default.
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-        VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
-        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
+    image: ${FRONTEND_IMAGE:-ghcr.io/iarc-il/holylandaward/frontend:latest}
     container_name: holyland_frontend_prod
-    ports:
-      - "80:80"
     depends_on:
       - backend
     networks:
-      - holyland_network
+      - holyland_network        # reach backend:8000 (internal)
+      - nginx_proxy_default     # reachable by Nginx Proxy Manager
     restart: always
 
 volumes:
   postgres_data:
+    external: true
+    # Existing LIVE production volume — reused as-is (no migration, no data loss).
+    name: holyland_postgres_data
 
 networks:
   holyland_network:
     driver: bridge
+  # Shared network that Nginx Proxy Manager (nginx_proxy-app-1) is attached to.
+  nginx_proxy_default:
+    external: true
