@@ -24,7 +24,7 @@ import QsoStatsCard from "@/components/QsoStatsCard";
 import PaginationControls from "@/components/PaginationControls";
 import { Shield, ShieldOff, Loader2, ArrowLeft, Search } from "lucide-react";
 
-const QSO_PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 500];
 
 const AdminPage = () => {
   const { getToken } = useAuth();
@@ -294,6 +294,7 @@ const UserLogsSection = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserLabel, setSelectedUserLabel] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -310,7 +311,7 @@ const UserLogsSection = () => {
   const { data: qsosData, isLoading: qsosLoading } = useAdminUserQsos(
     selectedUserId,
     page,
-    QSO_PAGE_SIZE,
+    pageSize,
   );
 
   const handleSelectUser = (user: {
@@ -321,6 +322,7 @@ const UserLogsSection = () => {
     setSelectedUserId(user.clerk_user_id);
     setSelectedUserLabel(user.callsign || user.email || user.clerk_user_id);
     setPage(1);
+    setPageSize(50);
     setSearchQuery("");
     setDebouncedQuery("");
   };
@@ -328,6 +330,12 @@ const UserLogsSection = () => {
   const handleBack = () => {
     setSelectedUserId(null);
     setSelectedUserLabel("");
+    setPage(1);
+    setPageSize(50);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
     setPage(1);
   };
 
@@ -378,6 +386,8 @@ const UserLogsSection = () => {
                 totalItems={qsosData.total_qsos}
                 pageSize={qsosData.page_size}
                 onPageChange={setPage}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
               />
             )}
           </div>
