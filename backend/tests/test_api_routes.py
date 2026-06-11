@@ -8,10 +8,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import main as main_module
+import utils as utils_module
 from database import Base, get_db
 from main import app
 from qsos.models import QSOLogs
+from system_settings.repository import get_setting, set_setting
 from users import router as users_router_module
+from users.admin_router import verify_admin
 from users.models import LinkedCallsigns, Users
 from utils import verify_clerk_session
 
@@ -27,6 +30,7 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     session = TestingSessionLocal()
+    session.info["sessionmaker"] = TestingSessionLocal
     try:
         yield session
     finally:
@@ -44,11 +48,15 @@ def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[verify_clerk_session] = override_verify_clerk_session
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = db_session.info["sessionmaker"]
 
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        main_module.SessionLocal = original_session_local
+        app.dependency_overrides.clear()
 
 
 def create_user(db_session, callsign="4Z1ABC", region=1):
@@ -63,6 +71,113 @@ def create_user(db_session, callsign="4Z1ABC", region=1):
     db_session.commit()
     db_session.refresh(user)
     return user
+
+
+def patch_clerk_roles(monkeypatch, admin_user_ids=None):
+    admin_user_ids = set(admin_user_ids or [])
+
+    def fake_get(*, user_id):
+        return SimpleNamespace(
+            email_addresses=[],
+            username=None,
+            public_metadata={"role": "admin"} if user_id in admin_user_ids else {},
+        )
+
+    monkeypatch.setattr(utils_module.clerk.users, "get", fake_get)
+
+
+def test_registration_status_excludes_admin_users(client, db_session, monkeypatch):
+    patch_clerk_roles(monkeypatch, admin_user_ids={"admin_1"})
+    db_session.add_all(
+        [
+            Users(
+                clerk_user_id="admin_1",
+                email="admin@example.com",
+                username="admin",
+            ),
+            Users(
+                clerk_user_id="user_1",
+                email="user@example.com",
+                username="user",
+            ),
+        ]
+    )
+    db_session.commit()
+    set_setting(db_session, "user_limit", "1")
+
+    response = client.get("/registration-status")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "user_limit": 1,
+        "current_users": 1,
+        "limit_reached": True,
+        "remaining_slots": 0,
+    }
+
+
+def test_admin_can_update_and_clear_user_limit(client, db_session, monkeypatch):
+    patch_clerk_roles(monkeypatch, admin_user_ids={"admin_1"})
+
+    async def override_verify_admin():
+        return "admin_1"
+
+    app.dependency_overrides[verify_admin] = override_verify_admin
+
+    update_response = client.post("/admin/user-limit", json={"user_limit": 25})
+
+    assert update_response.status_code == 200
+    assert update_response.json()["user_limit"] == 25
+    assert get_setting(db_session, "user_limit") == "25"
+
+    clear_response = client.post("/admin/user-limit", json={"user_limit": None})
+
+    assert clear_response.status_code == 200
+    assert clear_response.json()["user_limit"] is None
+    assert get_setting(db_session, "user_limit") is None
+
+
+def test_new_non_admin_user_is_rejected_when_user_limit_reached(
+    client, db_session, monkeypatch
+):
+    patch_clerk_roles(monkeypatch)
+    set_setting(db_session, "user_limit", "0")
+
+    response = client.get("/user/profile")
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "User limit has been reached. New accounts are currently closed."
+    }
+    assert db_session.query(Users).count() == 0
+
+
+def test_existing_user_is_allowed_when_user_limit_reached(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    set_setting(db_session, "user_limit", "0")
+
+    response = client.get("/user/profile")
+
+    assert response.status_code == 200
+    assert response.json()["clerk_user_id"] == "user_1"
+
+
+def test_new_admin_user_is_allowed_when_user_limit_reached(
+    client, db_session, monkeypatch
+):
+    patch_clerk_roles(monkeypatch, admin_user_ids={"admin_1"})
+    set_setting(db_session, "user_limit", "0")
+
+    async def override_admin_session():
+        return "admin_1"
+
+    app.dependency_overrides[verify_clerk_session] = override_admin_session
+
+    response = client.get("/user/profile")
+
+    assert response.status_code == 200
+    assert response.json()["clerk_user_id"] == "admin_1"
+    assert db_session.query(Users).filter(Users.clerk_user_id == "admin_1").one()
 
 
 def test_get_user_profile_returns_current_user(client, db_session):
@@ -403,7 +518,7 @@ def test_get_qso_logs_by_user_paginates_qsos(client, db_session):
 def test_get_qso_logs_by_user_rejects_too_large_page_size(client, db_session):
     create_user(db_session, callsign="4Z1ABC", region=1)
 
-    response = client.get("/qsos/by-user/logs?page_size=101")
+    response = client.get("/qsos/by-user/logs?page_size=501")
 
     assert response.status_code == 422
 

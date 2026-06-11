@@ -25,6 +25,11 @@ def get_user_by_clerk_id(db: Session, clerk_user_id: str) -> Optional[Users]:
     return db.query(Users).filter(Users.clerk_user_id == clerk_user_id).first()
 
 
+def get_all_users(db: Session) -> List[Users]:
+    """Get all local application users."""
+    return db.query(Users).all()
+
+
 def get_user_by_callsign(db: Session, callsign: str) -> Optional[Users]:
     """Get user by callsign"""
     return db.query(Users).filter(Users.callsign == callsign).first()

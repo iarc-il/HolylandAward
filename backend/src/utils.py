@@ -58,6 +58,48 @@ def get_frontend_origins() -> list[str]:
     return origins or list(DEFAULT_FRONTEND_ORIGINS)
 
 
+USER_LIMIT_REACHED_MESSAGE = "User limit has been reached. New accounts are currently closed."
+
+
+def is_clerk_user_admin_record(clerk_user) -> bool:
+    metadata = getattr(clerk_user, "public_metadata", {}) or {}
+    return metadata.get("role") == "admin"
+
+
+def is_clerk_user_id_admin(user_id: str) -> bool:
+    try:
+        clerk_user = clerk.users.get(user_id=user_id)
+    except Exception:
+        return False
+
+    return bool(clerk_user and is_clerk_user_admin_record(clerk_user))
+
+
+def count_non_admin_users(db: Session) -> int:
+    from users.repository import get_all_users
+
+    return sum(
+        1 for user in get_all_users(db) if not is_clerk_user_id_admin(user.clerk_user_id)
+    )
+
+
+def ensure_user_limit_allows_creation(db: Session, clerk_user) -> None:
+    if clerk_user and is_clerk_user_admin_record(clerk_user):
+        return
+
+    from system_settings.repository import get_user_limit
+
+    user_limit = get_user_limit(db)
+    if user_limit is None:
+        return
+
+    if count_non_admin_users(db) >= user_limit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=USER_LIMIT_REACHED_MESSAGE,
+        )
+
+
 async def get_or_create_user_from_clerk(db: Session, clerk_user_id: str):
     """
     Get existing user or create new user from Clerk data.
@@ -71,18 +113,24 @@ async def get_or_create_user_from_clerk(db: Session, clerk_user_id: str):
         return existing_user
 
     # User doesn't exist - fetch details from Clerk and create
+    clerk_user = None
     try:
         clerk_user = clerk.users.get(user_id=clerk_user_id)
+    except Exception as e:
+        print(f"Error fetching user from Clerk: {e}")
 
-        if not clerk_user:
-            # Fallback: create user with minimal info
-            return create_user(
-                db=db,
-                clerk_user_id=clerk_user_id,
-                email=f"{clerk_user_id}@unknown.clerk",  # Placeholder email
-                username=None,
-            )
+    ensure_user_limit_allows_creation(db, clerk_user)
 
+    if not clerk_user:
+        # Fallback: create user with minimal info
+        return create_user(
+            db=db,
+            clerk_user_id=clerk_user_id,
+            email=f"{clerk_user_id}@unknown.clerk",  # Placeholder email
+            username=None,
+        )
+
+    try:
         # Extract email safely
         email = f"{clerk_user_id}@unknown.clerk"  # Default fallback
         if hasattr(clerk_user, "email_addresses") and clerk_user.email_addresses:
@@ -102,20 +150,13 @@ async def get_or_create_user_from_clerk(db: Session, clerk_user_id: str):
 
         # Get username safely
         username = clerk_user.username if hasattr(clerk_user, "username") else None
-
-        # Create user
-        return create_user(
-            db=db, clerk_user_id=clerk_user_id, email=email, username=username
-        )
     except Exception as e:
-        print(f"Error creating user from Clerk data: {e}")
-        # Create minimal user record if Clerk fetch fails
-        return create_user(
-            db=db,
-            clerk_user_id=clerk_user_id,
-            email=f"{clerk_user_id}@unknown.clerk",
-            username=None,
-        )
+        print(f"Error reading Clerk user data: {e}")
+        email = f"{clerk_user_id}@unknown.clerk"
+        username = None
+
+    # Create user
+    return create_user(db=db, clerk_user_id=clerk_user_id, email=email, username=username)
 
 
 async def authenticate_request(request: Request) -> str:
@@ -165,10 +206,8 @@ async def is_admin_user(user_id: str) -> bool:
         clerk_user = clerk.users.get(user_id=user_id)
         if not clerk_user:
             return False
-        metadata = getattr(clerk_user, "public_metadata", {}) or {}
-        return metadata.get("role") == "admin"
+        return is_clerk_user_admin_record(clerk_user)
     except Exception:
         return False
-
 
 
