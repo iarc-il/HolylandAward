@@ -19,3 +19,7 @@ class QSOResponse(QSO):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+
+class DeleteQsosRequest(BaseModel):
+    ids: list[int]

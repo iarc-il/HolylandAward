@@ -83,3 +83,18 @@ def get_areas_by_spotters(db: Session, spotters: list[str]) -> list[str]:
     result = db.execute(stmt)
     areas = result.scalars().all()
     return list(areas)
+
+
+def delete_qsos_by_ids_and_spotters(
+    db: Session, ids: list[int], spotters: list[str]
+) -> int:
+    if not ids or not spotters:
+        return 0
+
+    result = (
+        db.query(QSOLogs)
+        .filter(QSOLogs.id.in_(ids), QSOLogs.spotter.in_(spotters))
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return result

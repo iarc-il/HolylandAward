@@ -7,9 +7,11 @@ from utils import verify_clerk_session
 from users.repository import get_callsigns_for_user, get_user_by_clerk_id
 from qsos.repository import (
     count_qsos_by_spotters,
+    delete_qsos_by_ids_and_spotters,
     get_areas_by_spotters,
     get_qsos_by_spotters,
 )
+from qsos.schema import DeleteQsosRequest
 from qsos.service import get_regions_from_areas
 
 router = APIRouter(prefix="/qsos", tags=["qsos"])
@@ -91,3 +93,22 @@ def get_user_qso_logs(
             for qso in qsos
         ],
     }
+
+
+@router.delete("/by-user/logs")
+def delete_user_qso_logs(
+    body: DeleteQsosRequest,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    user = get_user_by_clerk_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not user.callsign:
+        raise HTTPException(status_code=400, detail="User has no callsign assigned")
+
+    callsigns = get_callsigns_for_user(db, user)
+    deleted = delete_qsos_by_ids_and_spotters(db, body.ids, callsigns)
+
+    return {"deleted": deleted}
