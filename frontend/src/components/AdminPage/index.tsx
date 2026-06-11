@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,11 @@ import {
 } from "@/api/useCallsignRequests";
 import { useAdminUserSearch } from "@/api/useAdminUserSearch";
 import { useAdminUserQsos } from "@/api/useAdminUserQsos";
+import { useAdminUserLimit, useUpdateUserLimit } from "@/api/useUserLimit";
 import QsoTable from "@/components/QsoTable";
 import QsoStatsCard from "@/components/QsoStatsCard";
 import PaginationControls from "@/components/PaginationControls";
-import { Shield, ShieldOff, Loader2, ArrowLeft, Search } from "lucide-react";
+import { Shield, ShieldOff, Loader2, ArrowLeft, Search, Users } from "lucide-react";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 500];
 
@@ -246,6 +247,8 @@ const AdminPage = () => {
         )}
       </div>
 
+      <UserLimitSection />
+
       <UserLogsSection />
 
       <Dialog
@@ -285,6 +288,130 @@ const AdminPage = () => {
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+const UserLimitSection = () => {
+  const { data, isLoading, isError } = useAdminUserLimit();
+  const updateMutation = useUpdateUserLimit();
+  const [limitInput, setLimitInput] = useState("");
+
+  useEffect(() => {
+    if (data) {
+      setLimitInput(data.user_limit?.toString() ?? "");
+    }
+  }, [data]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedLimit = limitInput.trim();
+    const nextLimit = trimmedLimit === "" ? null : Number(trimmedLimit);
+    if (
+      nextLimit !== null &&
+      (!Number.isInteger(nextLimit) || nextLimit < 0)
+    ) {
+      toast.error("User limit must be a whole number greater than or equal to 0");
+      return;
+    }
+
+    try {
+      await updateMutation.mutateAsync(nextLimit);
+      toast.success(
+        nextLimit === null ? "User limit cleared" : "User limit updated",
+      );
+    } catch (error) {
+      toast.error("Failed to update user limit", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">User Limit</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Limit new non-admin accounts. Admins are excluded from this count.
+          </p>
+        </div>
+        <Users className="h-5 w-5 text-muted-foreground" />
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading user limit...
+        </div>
+      ) : isError ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Could not load user limit.
+        </div>
+      ) : data ? (
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-lg border border-border bg-background p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Current Users
+              </p>
+              <p className="mt-1 text-2xl font-bold">{data.current_users}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-background p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Limit
+              </p>
+              <p className="mt-1 text-2xl font-bold">
+                {data.user_limit === null ? "Unlimited" : data.user_limit}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-background p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Status
+              </p>
+              <p
+                className={`mt-1 text-sm font-semibold ${
+                  data.limit_reached ? "text-amber-600" : "text-green-600"
+                }`}
+              >
+                {data.user_limit === null
+                  ? "Open"
+                  : data.limit_reached
+                    ? "Limit reached"
+                    : `${data.remaining_slots} slots available`}
+              </p>
+            </div>
+          </div>
+
+          <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Leave blank for unlimited"
+              value={limitInput}
+              onChange={(event) => setLimitInput(event.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Limit
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setLimitInput("")}
+                disabled={updateMutation.isPending}
+              >
+                Clear
+              </Button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+    </section>
   );
 };
 

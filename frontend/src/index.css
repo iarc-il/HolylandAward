@@ -230,6 +230,12 @@
   border-radius: var(--radius);
 }
 
+.clerk-hide-sign-up .cl-footerAction,
+.clerk-hide-sign-up .cl-footerActionText,
+.clerk-hide-sign-up .cl-footerActionLink {
+  display: none !important;
+}
+
 /* Utility classes for spacing */
 .spacing-card {
   padding: 1rem 1.5rem; /* 16-24px card padding */

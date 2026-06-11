@@ -3,6 +3,14 @@ import { SignIn, SignOutButton } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Wrench } from "lucide-react";
 
+const SIGN_IN_ONLY_APPEARANCE = {
+  elements: {
+    footerAction: "hidden",
+    footerActionLink: "hidden",
+    footerActionText: "hidden",
+  },
+};
+
 interface MaintenancePageProps {
   showAdminSignIn?: boolean;
 }
@@ -13,8 +21,8 @@ const MaintenancePage = ({ showAdminSignIn }: MaintenancePageProps) => {
   if (showSignIn) {
     return (
       <div className="flex-1 h-screen flex items-center justify-center relative z-10">
-        <div className="bg-card p-8 rounded-xl shadow-lg border border-border">
-          <SignIn />
+        <div className="clerk-hide-sign-up bg-card p-8 rounded-xl shadow-lg border border-border">
+          <SignIn appearance={SIGN_IN_ONLY_APPEARANCE} />
         </div>
       </div>
     );

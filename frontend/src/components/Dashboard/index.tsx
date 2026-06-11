@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { SignOutButton } from "@clerk/clerk-react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import UserDetailsDialog from "../UserDetailsDialog";
 import AreasRegionsDialog from "../AreasRegionsDialog";
 import Map from "../Map";
@@ -37,6 +39,7 @@ const Dashboard = () => {
     isProfileComplete,
     isLoading,
     isError: isProfileError,
+    error: profileError,
   } = useProfile();
   const {
     data: userAreasData,
@@ -48,6 +51,9 @@ const Dashboard = () => {
   const countedCallsigns = userAreasData?.callsigns ?? [];
   const shouldRequireProfile =
     !isLoading && !isProfileError && !isProfileComplete;
+  const profileErrorMessage =
+    profileError instanceof Error ? profileError.message : "";
+  const profileLimitReached = profileErrorMessage.includes("User limit");
 
   // Check if all requirements are met
   const areasComplete =
@@ -102,6 +108,28 @@ const Dashboard = () => {
     newParams.delete("setup");
     setSearchParams(newParams);
   };
+
+  if (!profile && isProfileError) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-md">
+          <h1 className="text-2xl font-bold text-foreground">
+            {profileLimitReached ? "Registration Closed" : "Profile Unavailable"}
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {profileLimitReached
+              ? "The user limit has been reached, so new accounts cannot be created right now. Existing users can still sign in."
+              : "We could not load your profile. Please try again later."}
+          </p>
+          <SignOutButton>
+            <Button className="mt-5" variant="outline">
+              Sign Out
+            </Button>
+          </SignOutButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-6">
