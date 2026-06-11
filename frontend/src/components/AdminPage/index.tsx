@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,14 @@ import {
   useApproveCallsignRequest,
   useDenyCallsignRequest,
 } from "@/api/useCallsignRequests";
-import { Shield, ShieldOff, Loader2 } from "lucide-react";
+import { useAdminUserSearch } from "@/api/useAdminUserSearch";
+import { useAdminUserQsos } from "@/api/useAdminUserQsos";
+import QsoTable from "@/components/QsoTable";
+import QsoStatsCard from "@/components/QsoStatsCard";
+import PaginationControls from "@/components/PaginationControls";
+import { Shield, ShieldOff, Loader2, ArrowLeft, Search } from "lucide-react";
+
+const QSO_PAGE_SIZE = 50;
 
 const AdminPage = () => {
   const { getToken } = useAuth();
@@ -239,6 +246,8 @@ const AdminPage = () => {
         )}
       </div>
 
+      <UserLogsSection />
+
       <Dialog
         open={denyDialog.open}
         onOpenChange={(open) =>
@@ -276,6 +285,167 @@ const AdminPage = () => {
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+const UserLogsSection = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserLabel, setSelectedUserLabel] = useState("");
+  const [page, setPage] = useState(1);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchQuery]);
+
+  const { data: searchData, isLoading: searchLoading } =
+    useAdminUserSearch(debouncedQuery);
+
+  const { data: qsosData, isLoading: qsosLoading } = useAdminUserQsos(
+    selectedUserId,
+    page,
+    QSO_PAGE_SIZE,
+  );
+
+  const handleSelectUser = (user: {
+    clerk_user_id: string;
+    callsign: string | null;
+    email: string | null;
+  }) => {
+    setSelectedUserId(user.clerk_user_id);
+    setSelectedUserLabel(user.callsign || user.email || user.clerk_user_id);
+    setPage(1);
+    setSearchQuery("");
+    setDebouncedQuery("");
+  };
+
+  const handleBack = () => {
+    setSelectedUserId(null);
+    setSelectedUserLabel("");
+    setPage(1);
+  };
+
+  if (selectedUserId) {
+    return (
+      <section className="rounded-xl border border-border bg-card p-6 shadow-md">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="text-muted-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h2 className="text-xl font-semibold">User QSO Logs</h2>
+              <p className="text-sm text-muted-foreground">
+                {selectedUserLabel}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {qsosLoading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading QSOs...
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <QsoStatsCard
+              totalQsos={qsosData?.total_qsos ?? 0}
+              callsigns={qsosData?.callsigns ?? []}
+            />
+
+            <QsoTable
+              title={`QSOs for ${selectedUserLabel}`}
+              qsos={qsosData?.qsos ?? []}
+              emptyMessage="No QSOs found for this user."
+            />
+
+            {qsosData && qsosData.total_qsos > 0 && (
+              <PaginationControls
+                page={qsosData.page}
+                totalPages={qsosData.total_pages}
+                totalItems={qsosData.total_qsos}
+                pageSize={qsosData.page_size}
+                onPageChange={setPage}
+              />
+            )}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-6 shadow-md">
+      <h2 className="mb-4 text-xl font-semibold">User Logs</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Search for a user by callsign, email, or username to view their QSO
+        logs.
+      </p>
+
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search users..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {searchLoading && (
+        <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Searching...
+        </div>
+      )}
+
+      {!searchLoading && debouncedQuery && searchData?.total === 0 && (
+        <p className="py-4 text-sm text-muted-foreground">
+          No users found matching "{debouncedQuery}".
+        </p>
+      )}
+
+      {!searchLoading && searchData && searchData.total > 0 && (
+        <div className="space-y-2">
+          {searchData.users.map((user) => (
+            <button
+              key={user.clerk_user_id}
+              type="button"
+              onClick={() => handleSelectUser(user)}
+              className="w-full rounded-lg border border-border bg-background p-3 text-left transition-colors hover:bg-accent/10"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  {user.callsign && (
+                    <p className="font-semibold uppercase">{user.callsign}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    {user.email || user.username || user.clerk_user_id}
+                  </p>
+                </div>
+                {user.region !== null && user.region !== undefined && (
+                  <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                    Region {user.region}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 };
 

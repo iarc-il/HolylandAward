@@ -1,13 +1,7 @@
 import { useUserQsos } from "@/api/useUserQsos";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import QsoTable from "@/components/QsoTable";
+import QsoStatsCard from "@/components/QsoStatsCard";
+import PaginationControls from "@/components/PaginationControls";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router";
 
@@ -31,13 +25,6 @@ const MyQsosPage = () => {
   const errorMessage =
     error instanceof Error ? error.message : "Could not load your QSOs.";
   const totalPages = data?.total_pages ?? 0;
-  const pageQsoStart =
-    data && data.total_qsos > 0 && data.qsos.length > 0
-      ? (data.page - 1) * data.page_size + 1
-      : 0;
-  const pageQsoEnd = data
-    ? Math.min(data.page * data.page_size, data.total_qsos)
-    : 0;
 
   useEffect(() => {
     if (!data) return;
@@ -70,11 +57,11 @@ const MyQsosPage = () => {
     setSearchParams(nextSearchParams);
   };
 
-  const handlePageSizeChange = (newPageSize: string) => {
+  const handlePageSizeChange = (newPageSize: number) => {
     const nextSearchParams = new URLSearchParams(searchParams);
     nextSearchParams.delete("page");
-    if (newPageSize !== "50") {
-      nextSearchParams.set("pageSize", newPageSize);
+    if (newPageSize !== 50) {
+      nextSearchParams.set("pageSize", String(newPageSize));
     } else {
       nextSearchParams.delete("pageSize");
     }
@@ -103,33 +90,10 @@ const MyQsosPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-xl border border-border bg-card p-5 shadow-md">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total QSOs
-                  </p>
-                  <p className="text-3xl font-bold text-primary">
-                    {data?.total_qsos ?? 0}
-                  </p>
-                </div>
-                <div className="sm:text-right">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Counting callsigns
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
-                    {(data?.callsigns ?? []).map((callsign) => (
-                      <span
-                        key={callsign}
-                        className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground"
-                      >
-                        {callsign}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <QsoStatsCard
+              totalQsos={data?.total_qsos ?? 0}
+              callsigns={data?.callsigns ?? []}
+            />
 
             <QsoTable
               title="My QSOs"
@@ -137,60 +101,17 @@ const MyQsosPage = () => {
               emptyMessage="No QSOs found. Upload an ADIF file to get started."
             />
 
-              {data && data.total_qsos > 0 && (
-                <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-md sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {pageQsoStart}-{pageQsoEnd} of {data.total_qsos} QSOs
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">
-                        Per page:
-                      </span>
-                      <Select
-                        value={String(pageSize)}
-                        onValueChange={handlePageSizeChange}
-                      >
-                        <SelectTrigger className="h-8 w-16">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PAGE_SIZE_OPTIONS.map((size) => (
-                            <SelectItem key={size} value={String(size)}>
-                              {size}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {totalPages > 1 && (
-                      <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(page - 1)}
-                          disabled={page <= 1}
-                        >
-                          Previous
-                        </Button>
-                        <span className="text-sm font-medium text-foreground">
-                          Page {data.page} of {totalPages}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(page + 1)}
-                          disabled={page >= totalPages}
-                        >
-                          Next
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
+            {data && data.total_qsos > 0 && (
+              <PaginationControls
+                page={data.page}
+                totalPages={totalPages}
+                totalItems={data.total_qsos}
+                pageSize={data.page_size}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+              />
+            )}
           </div>
         )}
       </div>
