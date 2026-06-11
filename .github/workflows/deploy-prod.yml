@@ -6,6 +6,11 @@ on:
       - master
   workflow_dispatch:
 
+# Serialize production builds; never cancel a release mid-flight.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/holylandaward

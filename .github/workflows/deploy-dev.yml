@@ -6,6 +6,11 @@ on:
       - dev
   workflow_dispatch:
 
+# Cancel an in-flight dev build if a newer commit is pushed.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/holylandaward

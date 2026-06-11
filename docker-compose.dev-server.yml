@@ -1,8 +1,15 @@
 # docker-compose.dev-server.yml
-# Run this on the dev server to pull the pre-built :dev images from GHCR.
+# Dev/staging stack. Pulls the pre-built :dev images from GHCR.
+# Served by Nginx Proxy Manager at https://holyland-dev.<SERVER_IP>.sslip.io
+# (NPM forwards that host -> the frontend container :80; frontend nginx serves
+#  the SPA and proxies /api/* -> backend:8000).
+#
 # Usage:
 #   docker compose -f docker-compose.dev-server.yml pull
 #   docker compose -f docker-compose.dev-server.yml up -d
+#
+# IMPORTANT: this stack uses its OWN fresh DB volume (holyland_postgres_data_staging),
+# kept separate from the live production volume (holyland_postgres_data). See DEPLOYMENT.md.
 
 services:
   # PostgreSQL Database
@@ -13,8 +20,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-holyland_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-holyland_password}
       POSTGRES_DB: ${POSTGRES_DB:-holyland_award}
-    ports:
-      - "5434:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
@@ -33,6 +38,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-holyland_user}:${POSTGRES_PASSWORD:-holyland_password}@db:5432/${POSTGRES_DB:-holyland_award}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      # CORS origin — must match the sslip.io dev host served by NPM.
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "1293:8000"
@@ -43,27 +49,30 @@ services:
       - holyland_network
     restart: unless-stopped
 
-  # Frontend (Dev) — pre-built dev image from GHCR (Vite dev server)
+  # Frontend (Dev) — pre-built dev image from GHCR.
+  # This is the nginx production build (frontend/Dockerfile), NOT a Vite dev server:
+  # VITE_* values are baked in at CI build time, so no runtime VITE_* envs here, and
+  # nothing is published on the host — NPM reaches this container on :80 via nginx_proxy_default.
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/iarc-il/holylandaward/frontend:dev}
     container_name: holyland_frontend_dev
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-      VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
-      VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
-    ports:
-      - "5173:5173"
     depends_on:
       - backend
     networks:
-      - holyland_network
+      - holyland_network        # reach backend:8000 (internal)
+      - nginx_proxy_default     # reachable by Nginx Proxy Manager
     restart: unless-stopped
 
 volumes:
   postgres_data_dev:
     external: true
-    name: holyland_postgres_data_dev
+    # Fresh, dedicated staging volume — must NOT be the live production volume.
+    # Pre-create it once: docker volume create holyland_postgres_data_staging
+    name: holyland_postgres_data_staging
 
 networks:
   holyland_network:
     driver: bridge
+  # Shared network that Nginx Proxy Manager (nginx_proxy-app-1) is attached to.
+  nginx_proxy_default:
+    external: true
