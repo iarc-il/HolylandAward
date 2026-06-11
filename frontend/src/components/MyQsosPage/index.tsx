@@ -1,8 +1,19 @@
 import { useUserQsos } from "@/api/useUserQsos";
+import { useDeleteQsos } from "@/api/useDeleteQsos";
 import QsoTable from "@/components/QsoTable";
 import QsoStatsCard from "@/components/QsoStatsCard";
 import PaginationControls from "@/components/PaginationControls";
-import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 500];
@@ -22,6 +33,9 @@ const MyQsosPage = () => {
   const page = getPageFromSearchParams(searchParams);
   const pageSize = getPageSizeFromSearchParams(searchParams);
   const { data, isLoading, isError, error } = useUserQsos(page, pageSize);
+  const deleteQsos = useDeleteQsos();
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const errorMessage =
     error instanceof Error ? error.message : "Could not load your QSOs.";
   const totalPages = data?.total_pages ?? 0;
@@ -55,6 +69,7 @@ const MyQsosPage = () => {
       nextSearchParams.set("page", String(nextPage));
     }
     setSearchParams(nextSearchParams);
+    setSelectedIds(new Set());
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
@@ -66,6 +81,22 @@ const MyQsosPage = () => {
       nextSearchParams.delete("pageSize");
     }
     setSearchParams(nextSearchParams);
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteSelected = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteDialog(false);
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    deleteQsos.mutate(ids, {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+      },
+    });
   };
 
   return (
@@ -95,10 +126,28 @@ const MyQsosPage = () => {
               callsigns={data?.callsigns ?? []}
             />
 
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  disabled={deleteQsos.isPending}
+                >
+                  <Trash2 className="size-4" />
+                  {deleteQsos.isPending
+                    ? "Deleting..."
+                    : `Delete ${selectedIds.size} selected`}
+                </Button>
+              </div>
+            )}
+
             <QsoTable
               title="My QSOs"
               qsos={data?.qsos ?? []}
               emptyMessage="No QSOs found. Upload an ADIF file to get started."
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
             />
 
             {data && data.total_qsos > 0 && (
@@ -114,6 +163,33 @@ const MyQsosPage = () => {
             )}
           </div>
         )}
+
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete QSOs</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete {selectedIds.size} selected QSO
+                {selectedIds.size === 1 ? "" : "s"}? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteQsos.isPending}
+              >
+                {deleteQsos.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
