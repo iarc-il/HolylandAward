@@ -134,3 +134,23 @@ export const useUpdateRegion = () => {
     },
   });
 };
+
+export const useCancelCallsignRequest = () => {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (requestId: number) => {
+      const token = await getToken();
+      const response = await apiClient.patch(
+        `/user/callsign-requests/${requestId}/cancel`,
+        {},
+        { Authorization: `Bearer ${token}` },
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user", "callsign-requests"] });
+    },
+  });
+};

@@ -12,6 +12,7 @@ from users.repository import (
     get_callsign_request_by_id,
     approve_callsign_request as repo_approve,
     deny_callsign_request as repo_deny,
+    cancel_callsign_request as repo_cancel,
     update_user_callsign,
     add_linked_callsign,
     update_user_region,
@@ -144,6 +145,39 @@ async def get_my_callsign_requests(
         )
         for r in requests
     ]
+
+
+@router.patch("/user/callsign-requests/{request_id}/cancel", response_model=CallsignChangeRequestResponse)
+async def cancel_callsign_change_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    from utils import get_or_create_user_from_clerk
+    user = await get_or_create_user_from_clerk(db, user_id)
+
+    request = get_callsign_request_by_id(db, request_id)
+    if not request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+    if request.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your request")
+    if request.status != "pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending requests can be cancelled")
+
+    request = repo_cancel(db, request)
+
+    return CallsignChangeRequestResponse(
+        id=request.id,
+        user_id=request.user_id,
+        old_callsign=request.old_callsign,
+        new_callsign=request.new_callsign,
+        status=request.status,
+        reason=request.reason,
+        created_at=request.created_at,
+        updated_at=request.updated_at,
+        user_callsign=user.callsign,
+        user_email=user.email,
+    )
 
 
 @router.get("/admin/callsign-requests", response_model=List[CallsignChangeRequestResponse])

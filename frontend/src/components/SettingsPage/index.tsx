@@ -24,6 +24,7 @@ import { useProfile } from "@/api/useProfile";
 import {
   useMyCallsignRequests,
   useCreateCallsignRequest,
+  useCancelCallsignRequest,
   useUpdateRegion,
 } from "@/api/useCallsignRequests";
 
@@ -80,6 +81,7 @@ const SettingsPage = () => {
 
   const { data: myRequests } = useMyCallsignRequests();
   const createRequest = useCreateCallsignRequest();
+  const cancelRequestMutation = useCancelCallsignRequest();
   const updateRegion = useUpdateRegion();
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -171,16 +173,41 @@ const SettingsPage = () => {
     }
   };
 
+  const handleCancelRequest = async () => {
+    if (!pendingRequest) return;
+    try {
+      await cancelRequestMutation.mutateAsync(pendingRequest.id);
+      toast.success("Request cancelled", {
+        description: "Your callsign change request has been cancelled.",
+      });
+    } catch {
+      toast.error("Could not cancel request");
+    }
+  };
+
   const statusBadge = () => {
     if (!pendingRequest) return null;
     return (
       <div className="rounded-lg border border-amber-400/40 bg-amber-50 p-4 text-sm text-amber-800">
-        <p className="font-medium">Pending Callsign Change Request</p>
-        <p className="mt-1">
-          Changing from <strong>{pendingRequest.old_callsign}</strong> to{" "}
-          <strong>{pendingRequest.new_callsign}</strong> &mdash; awaiting admin
-          approval.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-medium">Pending Callsign Change Request</p>
+            <p className="mt-1">
+              Changing from <strong>{pendingRequest.old_callsign}</strong> to{" "}
+              <strong>{pendingRequest.new_callsign}</strong> &mdash; awaiting admin
+              approval.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 border-red-300 text-red-600 hover:bg-red-50"
+            onClick={handleCancelRequest}
+            disabled={cancelRequestMutation.isPending}
+          >
+            {cancelRequestMutation.isPending ? "Cancelling..." : "Cancel"}
+          </Button>
+        </div>
       </div>
     );
   };

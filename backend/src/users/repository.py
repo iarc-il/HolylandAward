@@ -198,3 +198,12 @@ def deny_callsign_request(
     db.commit()
     db.refresh(request)
     return request
+
+
+def cancel_callsign_request(
+    db: Session, request: CallsignChangeRequest
+) -> CallsignChangeRequest:
+    request.status = "cancelled"
+    db.commit()
+    db.refresh(request)
+    return request
