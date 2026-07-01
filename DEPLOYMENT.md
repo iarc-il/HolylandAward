@@ -3,13 +3,19 @@
 Two independent environments on **one server**, behind **Nginx Proxy Manager (NPM)**,
 deployed via **Portainer stacks** that auto-pull pre-built images from GHCR.
 
+> **Status: both environments are LIVE.** Phase A (dev/staging) and Phase B (production
+> cutover) are complete. Prod runs `:latest` from `master` on the `holyland_postgres_data`
+> volume; dev runs `:dev` from `dev` on `holyland_postgres_data_staging`. Each redeploys
+> via Portainer GitOps on its own branch. The Phase A/B sections below are kept as the
+> reference procedure (useful for rebuilds, disaster recovery, or a second environment).
+
 | Environment | Branch   | Image tag | Hostname                                   | Stack file                      | Containers      | DB volume                       |
 |-------------|----------|-----------|--------------------------------------------|---------------------------------|-----------------|---------------------------------|
 | Production  | `master` | `:latest` | `https://holylandaward.iarc.org`           | `docker-compose.prod.yml`       | `*_prod`        | `holyland_postgres_data` (live) |
-| Dev/staging | `dev`    | `:dev`    | `https://holyland-dev.116.203.98.92.sslip.io`| `docker-compose.dev-server.yml` | `*_dev`         | `holyland_postgres_data_staging`|
+| Dev/staging | `dev`    | `:dev`    | `https://holyland-dev.<SERVER_IP>.sslip.io`| `docker-compose.dev-server.yml` | `*_dev`         | `holyland_postgres_data_staging`|
 
 No DNS changes are required:
-- **sslip.io** resolves `holyland-dev.116.203.98.92.sslip.io` → `116.203.98.92` automatically.
+- **sslip.io** resolves `holyland-dev.<SERVER_IP>.sslip.io` → `<SERVER_IP>` automatically.
 - The backend is **not** on a subdomain. The frontend's nginx serves the SPA and
   proxies `/api/*` → `backend:8000` on the same origin (`frontend/nginx.conf`).
   So `VITE_API_BASE_URL` is the relative path **`/api`** for **both** environments,
@@ -78,10 +84,10 @@ The frontend `VITE_*` values are compiled into the static bundle by CI
 (`.github/workflows/deploy-*.yml`); they are **not** runtime env vars and have no
 effect if set on the server. Confirm the `VITE_API_BASE_URL` GitHub Secret is `/api`.
 
-### Google Maps & Clerk allow-lists (do this before dev goes live)
+### Google Maps & Clerk allow-lists
 - **Google Maps key:** in the Google Cloud console, confirm the key has an
   **HTTP-referrer restriction** + **API restriction (Maps JS)**, and **add the dev
-  host** `https://holyland-dev.116.203.98.92.sslip.io/*` to the allowed referrers
+  host** `https://holyland-dev.<SERVER_IP>.sslip.io/*` to the allowed referrers
   (production `https://holylandaward.iarc.org/*` should already be allowed).
   Otherwise maps break on dev.
 - **Clerk:** add the dev host to **allowed origins / redirect URLs** for the Clerk
@@ -95,6 +101,60 @@ effect if set on the server. Confirm the `VITE_API_BASE_URL` GitHub Secret is `/
 
 ---
 
+## Changing the Clerk keys (production)
+
+Clerk uses **two** keys that **must come from the same Clerk instance** — a mismatch
+breaks auth:
+
+| Key | Format | Used by | Where it's set |
+|-----|--------|---------|----------------|
+| Publishable key | `pk_test_…` / `pk_live_…` | frontend (browser) | **GitHub Secret** `VITE_CLERK_PUBLISHABLE_KEY` — **baked at build time** |
+| Secret key      | `sk_test_…` / `sk_live_…` | backend            | **Portainer** stack env var `CLERK_SECRET_KEY` — **runtime** |
+
+Get the new pair from **Clerk Dashboard → your instance → API Keys**. Then:
+
+### Case A — both keys from the same instance (simple swap / rotation)
+> ⚠️ The two deploy workflows currently read the **same repo-level** GitHub Secret
+> `VITE_CLERK_PUBLISHABLE_KEY`, so changing it rebuilds **both** dev and prod with the
+> new publishable key. Use this case when dev and prod share one Clerk instance. To keep
+> them on different instances, use **Case B** instead.
+
+1. **Update the publishable key (build-time):** GitHub → repo **Settings → Secrets and
+   variables → Actions** → edit `VITE_CLERK_PUBLISHABLE_KEY` → paste the new `pk_…`.
+2. **Rebuild `:latest`:** push any commit to `master`, or re-run the **Build & Deploy
+   Production** workflow (Actions → that workflow → *Run workflow*). Wait until it's green
+   so a new `frontend:latest` carrying the new key exists on GHCR.
+3. **Update the secret key (runtime):** Portainer → Stacks → **`holyland_prod`** →
+   *Editor* / *Environment variables* → set `CLERK_SECRET_KEY` to the new `sk_…`.
+4. **Redeploy the stack** (Portainer → `holyland_prod` → *Update the stack*, with *re-pull
+   image* on). This pulls the new `frontend:latest` **and** applies the new
+   `CLERK_SECRET_KEY` together, so the publishable/secret pair stays in sync.
+5. **Allowed origins:** in Clerk, ensure the instance lists
+   `https://holylandaward.iarc.org` under **allowed origins / redirect URLs**.
+
+> **Ordering matters.** Do step 2 (rebuild) *before* step 4 (redeploy), so the redeploy
+> pulls the matching frontend at the same moment the new backend secret takes effect —
+> this minimizes the window where the old `pk_…` and new `sk_…` (or vice-versa) coexist.
+
+### Case B — give production its own Clerk instance (prod ≠ dev)
+Use **GitHub Environments** so each branch's build bakes a different publishable key:
+1. GitHub → **Settings → Environments** → create `production` and `development`.
+2. Add an **environment-scoped** `VITE_CLERK_PUBLISHABLE_KEY` to each (live `pk_live_…`
+   in `production`, test `pk_test_…` in `development`).
+3. In `.github/workflows/deploy-prod.yml` add `environment: production` to the build job
+   (and `environment: development` in `deploy-dev.yml`) so each job reads its own secret.
+   The `secrets.VITE_CLERK_PUBLISHABLE_KEY` reference stays the same — it just resolves
+   per-environment.
+4. Set each stack's `CLERK_SECRET_KEY` in Portainer to the matching instance's `sk_…`
+   (live for `holyland_prod`, test for `holyland_dev`).
+5. Rebuild both branches and redeploy both stacks (as in Case A, steps 2 & 4).
+
+> A `pk_…`/`sk_…` mismatch (frontend on one instance, backend on another) makes sign-in
+> fail with token-verification errors. If login breaks after a change, that's the first
+> thing to check.
+
+---
+
 ## Phase A — stand up dev/staging (no impact on the live site)
 
 1. **Create the dev Portainer stack** from `docker-compose.dev-server.yml`.
@@ -102,10 +162,10 @@ effect if set on the server. Confirm the `VITE_API_BASE_URL` GitHub Secret is `/
      creation only) so Portainer picks up new `:dev` images within ~5 min.
    - Env vars (see `.env.server.example`):
      `POSTGRES_*`, `CLERK_SECRET_KEY`,
-     `FRONTEND_URL=https://holyland-dev.116.203.98.92.sslip.io`.
+     `FRONTEND_URL=https://holyland-dev.<SERVER_IP>.sslip.io`.
    - Uses the fresh `holyland_postgres_data_staging` volume (created above).
 2. **NPM proxy host:** add a proxy host
-   - Domain: `holyland-dev.116.203.98.92.sslip.io`
+   - Domain: `holyland-dev.<SERVER_IP>.sslip.io`
    - Forward to: `holyland_frontend_dev` port `80` (scheme `http`)
    - Enable **Websockets**, **Block common exploits**, and request a
      **Let's Encrypt** certificate (HTTP-01 works — sslip.io resolves to the IP).
@@ -156,7 +216,7 @@ frontend onto `nginx_proxy_default`.
 ## Verification
 
 1. **Dev up:** push to `dev` → CI builds `:dev` → Portainer re-pulls within ~5 min →
-   `https://holyland-dev.116.203.98.92.sslip.io` loads the SPA over HTTPS. The Network
+   `https://holyland-dev.<SERVER_IP>.sslip.io` loads the SPA over HTTPS. The Network
    tab shows `/api/...` calls succeeding (no CORS errors); maps render and Clerk
    login works (confirms the referrer/origin allow-lists).
 2. **Isolation (during Phase A):** `docker ps` shows the new `*_dev` containers
