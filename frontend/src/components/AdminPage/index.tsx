@@ -353,7 +353,7 @@ const UserLimitSection = () => {
           <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-lg border border-border bg-background p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Current Users
+                Total non-admin Users
               </p>
               <p className="mt-1 text-2xl font-bold">{data.current_users}</p>
             </div>
