@@ -12,10 +12,10 @@ deployed via **Portainer stacks** that auto-pull pre-built images from GHCR.
 | Environment | Branch   | Image tag | Hostname                                   | Stack file                      | Containers      | DB volume                       |
 |-------------|----------|-----------|--------------------------------------------|---------------------------------|-----------------|---------------------------------|
 | Production  | `master` | `:latest` | `https://holylandaward.iarc.org`           | `docker-compose.prod.yml`       | `*_prod`        | `holyland_postgres_data` (live) |
-| Dev/staging | `dev`    | `:dev`    | `https://holyland-dev.116.203.98.92.sslip.io`| `docker-compose.dev-server.yml` | `*_dev`         | `holyland_postgres_data_staging`|
+| Dev/staging | `dev`    | `:dev`    | `https://holyland-dev.<SERVER_IP>.sslip.io`| `docker-compose.dev-server.yml` | `*_dev`         | `holyland_postgres_data_staging`|
 
 No DNS changes are required:
-- **sslip.io** resolves `holyland-dev.116.203.98.92.sslip.io` → `116.203.98.92` automatically.
+- **sslip.io** resolves `holyland-dev.<SERVER_IP>.sslip.io` → `<SERVER_IP>` automatically.
 - The backend is **not** on a subdomain. The frontend's nginx serves the SPA and
   proxies `/api/*` → `backend:8000` on the same origin (`frontend/nginx.conf`).
   So `VITE_API_BASE_URL` is the relative path **`/api`** for **both** environments,
@@ -87,7 +87,7 @@ effect if set on the server. Confirm the `VITE_API_BASE_URL` GitHub Secret is `/
 ### Google Maps & Clerk allow-lists
 - **Google Maps key:** in the Google Cloud console, confirm the key has an
   **HTTP-referrer restriction** + **API restriction (Maps JS)**, and **add the dev
-  host** `https://holyland-dev.116.203.98.92.sslip.io/*` to the allowed referrers
+  host** `https://holyland-dev.<SERVER_IP>.sslip.io/*` to the allowed referrers
   (production `https://holylandaward.iarc.org/*` should already be allowed).
   Otherwise maps break on dev.
 - **Clerk:** add the dev host to **allowed origins / redirect URLs** for the Clerk
@@ -162,10 +162,10 @@ Use **GitHub Environments** so each branch's build bakes a different publishable
      creation only) so Portainer picks up new `:dev` images within ~5 min.
    - Env vars (see `.env.server.example`):
      `POSTGRES_*`, `CLERK_SECRET_KEY`,
-     `FRONTEND_URL=https://holyland-dev.116.203.98.92.sslip.io`.
+     `FRONTEND_URL=https://holyland-dev.<SERVER_IP>.sslip.io`.
    - Uses the fresh `holyland_postgres_data_staging` volume (created above).
 2. **NPM proxy host:** add a proxy host
-   - Domain: `holyland-dev.116.203.98.92.sslip.io`
+   - Domain: `holyland-dev.<SERVER_IP>.sslip.io`
    - Forward to: `holyland_frontend_dev` port `80` (scheme `http`)
    - Enable **Websockets**, **Block common exploits**, and request a
      **Let's Encrypt** certificate (HTTP-01 works — sslip.io resolves to the IP).
@@ -216,7 +216,7 @@ frontend onto `nginx_proxy_default`.
 ## Verification
 
 1. **Dev up:** push to `dev` → CI builds `:dev` → Portainer re-pulls within ~5 min →
-   `https://holyland-dev.116.203.98.92.sslip.io` loads the SPA over HTTPS. The Network
+   `https://holyland-dev.<SERVER_IP>.sslip.io` loads the SPA over HTTPS. The Network
    tab shows `/api/...` calls succeeding (no CORS errors); maps render and Clerk
    login works (confirms the referrer/origin allow-lists).
 2. **Isolation (during Phase A):** `docker ps` shows the new `*_dev` containers

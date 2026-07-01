@@ -20,6 +20,7 @@ jobs:
   build-and-push:
     name: Build and push dev images
     runs-on: ubuntu-latest
+    environment: development
     permissions:
       contents: read
       packages: write

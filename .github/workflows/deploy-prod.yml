@@ -20,6 +20,7 @@ jobs:
   build-and-push:
     name: Build and push production images
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       packages: write
