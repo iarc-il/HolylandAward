@@ -13,6 +13,7 @@ type UploadResponse = {
 const FileUploader = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const {
     mutate: uploadFile,
@@ -25,12 +26,19 @@ const FileUploader = () => {
   const handleClick = () => {
     reset();
     setUploadResult(null);
+    setFileError(null);
     fileInputRef.current?.click();
   };
 
   const processFile = useCallback((file: File) => {
     reset();
     setUploadResult(null);
+    if (!file.name.toLowerCase().endsWith(".adi")) {
+      setFileError("Only .adi files can be uploaded.");
+      return;
+    }
+
+    setFileError(null);
     uploadFile(
       { file },
       {
@@ -97,7 +105,7 @@ const FileUploader = () => {
               {isDragging ? "Drop your file here" : "Drag & drop your ADIF file here"}
             </p>
             <p className="text-sm text-muted-foreground">
-              or click to browse (.adif, .txt, .adi)
+              or click to browse (.adi)
             </p>
             <Button
               onClick={(e) => { e.stopPropagation(); handleClick(); }}
@@ -111,7 +119,7 @@ const FileUploader = () => {
 
           <input
             type="file"
-            accept=".adif,.txt,.adi"
+            accept=".adi"
             ref={fileInputRef}
             onChange={handleFileChange}
             style={{ display: "none" }}
@@ -126,13 +134,13 @@ const FileUploader = () => {
           )}
 
           {/* Error State */}
-          {isError && (
+          {(isError || fileError) && (
             <div className="w-full p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
               <div className="flex items-start space-x-2">
                 <div className="text-destructive font-semibold">Upload Failed</div>
               </div>
               <p className="text-destructive text-sm mt-1">
-                {error?.message || "An error occurred while uploading the file"}
+                {fileError || error?.message || "An error occurred while uploading the file"}
               </p>
             </div>
           )}
