@@ -1,0 +1,667 @@
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+import main as main_module
+import presence as presence_module
+import utils as utils_module
+from database import Base, get_db
+from main import app
+from qsos.models import QSOLogs
+from system_settings.repository import get_setting, set_setting
+from users import router as users_router_module
+from users.admin_router import verify_admin
+from users.models import LinkedCallsigns, Users
+from utils import verify_clerk_session
+
+
+@pytest.fixture
+def db_session():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    session = TestingSessionLocal()
+    session.info["sessionmaker"] = TestingSessionLocal
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture
+def client(db_session):
+    def override_get_db():
+        yield db_session
+
+    async def override_verify_clerk_session():
+        return "user_1"
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[verify_clerk_session] = override_verify_clerk_session
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = db_session.info["sessionmaker"]
+
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        main_module.SessionLocal = original_session_local
+        app.dependency_overrides.clear()
+
+
+def create_user(db_session, callsign="4Z1ABC", region=1):
+    user = Users(
+        clerk_user_id="user_1",
+        email="user@example.com",
+        username="tester",
+        callsign=callsign,
+        region=region,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+def patch_clerk_roles(monkeypatch, admin_user_ids=None):
+    admin_user_ids = set(admin_user_ids or [])
+
+    def fake_get(*, user_id):
+        return SimpleNamespace(
+            email_addresses=[],
+            username=None,
+            public_metadata={"role": "admin"} if user_id in admin_user_ids else {},
+        )
+
+    monkeypatch.setattr(utils_module.clerk.users, "get", fake_get)
+
+
+def test_admin_connected_users_counts_recent_heartbeats(client):
+    presence_module._connected_user_last_seen.clear()
+
+    async def override_verify_admin():
+        return "admin_1"
+
+    app.dependency_overrides[verify_admin] = override_verify_admin
+
+    heartbeat_response = client.post("/presence/heartbeat")
+    count_response = client.get("/admin/connected-users")
+
+    assert heartbeat_response.status_code == 204
+    assert count_response.status_code == 200
+    assert count_response.json() == {"connected_users": 1}
+    presence_module._connected_user_last_seen.clear()
+
+
+def test_registration_status_excludes_admin_users(client, db_session, monkeypatch):
+    patch_clerk_roles(monkeypatch, admin_user_ids={"admin_1"})
+    db_session.add_all(
+        [
+            Users(
+                clerk_user_id="admin_1",
+                email="admin@example.com",
+                username="admin",
+            ),
+            Users(
+                clerk_user_id="user_1",
+                email="user@example.com",
+                username="user",
+            ),
+        ]
+    )
+    db_session.commit()
+    set_setting(db_session, "user_limit", "1")
+
+    response = client.get("/registration-status")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "user_limit": 1,
+        "current_users": 1,
+        "limit_reached": True,
+        "remaining_slots": 0,
+    }
+
+
+def test_admin_can_update_and_clear_user_limit(client, db_session, monkeypatch):
+    patch_clerk_roles(monkeypatch, admin_user_ids={"admin_1"})
+
+    async def override_verify_admin():
+        return "admin_1"
+
+    app.dependency_overrides[verify_admin] = override_verify_admin
+
+    update_response = client.post("/admin/user-limit", json={"user_limit": 25})
+
+    assert update_response.status_code == 200
+    assert update_response.json()["user_limit"] == 25
+    assert get_setting(db_session, "user_limit") == "25"
+
+    clear_response = client.post("/admin/user-limit", json={"user_limit": None})
+
+    assert clear_response.status_code == 200
+    assert clear_response.json()["user_limit"] is None
+    assert get_setting(db_session, "user_limit") is None
+
+
+def test_new_non_admin_user_is_rejected_when_user_limit_reached(
+    client, db_session, monkeypatch
+):
+    patch_clerk_roles(monkeypatch)
+    set_setting(db_session, "user_limit", "0")
+
+    response = client.get("/user/profile")
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "User limit has been reached. New accounts are currently closed."
+    }
+    assert db_session.query(Users).count() == 0
+
+
+def test_existing_user_is_allowed_when_user_limit_reached(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    set_setting(db_session, "user_limit", "0")
+
+    response = client.get("/user/profile")
+
+    assert response.status_code == 200
+    assert response.json()["clerk_user_id"] == "user_1"
+
+
+def test_new_admin_user_is_allowed_when_user_limit_reached(
+    client, db_session, monkeypatch
+):
+    patch_clerk_roles(monkeypatch, admin_user_ids={"admin_1"})
+    set_setting(db_session, "user_limit", "0")
+
+    async def override_admin_session():
+        return "admin_1"
+
+    app.dependency_overrides[verify_clerk_session] = override_admin_session
+
+    response = client.get("/user/profile")
+
+    assert response.status_code == 200
+    assert response.json()["clerk_user_id"] == "admin_1"
+    assert db_session.query(Users).filter(Users.clerk_user_id == "admin_1").one()
+
+
+def test_get_user_profile_returns_current_user(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+
+    response = client.get("/user/profile")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": 1,
+        "clerk_user_id": "user_1",
+        "email": "user@example.com",
+        "username": "tester",
+        "callsign": "4Z1ABC",
+        "region": 1,
+        "linked_callsigns": [],
+    }
+
+
+def test_patch_user_profile_updates_callsign_and_region(client, db_session):
+    user = create_user(db_session, callsign="4Z1ABC", region=1)
+    qso = QSOLogs(
+        date="20240101",
+        freq=14.25,
+        spotter="4Z1ABC",
+        dx="W1ABC",
+        area="H08HF",
+    )
+    db_session.add(qso)
+    db_session.commit()
+
+    response = client.patch(
+        "/user/profile",
+        json={"callsign": " n0call ", "region": 0},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["callsign"] == "N0CALL"
+    assert body["region"] == 0
+    assert len(body["linked_callsigns"]) == 1
+    assert body["linked_callsigns"][0]["old_callsign"] == "4Z1ABC"
+    assert body["linked_callsigns"][0]["new_callsign"] == "N0CALL"
+
+    link = db_session.query(LinkedCallsigns).one()
+    assert link.user_id == user.id
+    assert link.old_callsign == "4Z1ABC"
+    assert link.new_callsign == "N0CALL"
+
+    db_session.refresh(qso)
+    assert qso.spotter == "4Z1ABC"
+
+
+def test_get_user_callsign_returns_current_user_details(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=2)
+
+    response = client.get("/user/callsign")
+
+    assert response.status_code == 200
+    assert response.json() == {"callsign": "4Z1ABC", "region": 2}
+
+
+def test_patch_user_profile_rejects_duplicate_callsign(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    db_session.add(
+        Users(
+            clerk_user_id="user_2",
+            email="other@example.com",
+            username="other",
+            callsign="N0CALL",
+            region=0,
+        )
+    )
+    db_session.commit()
+
+    response = client.patch(
+        "/user/profile",
+        json={"callsign": "n0call", "region": 1},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Callsign N0CALL is already taken"}
+
+
+def test_patch_user_profile_rejects_linked_callsign_owned_by_another_user(
+    client, db_session
+):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    other_user = Users(
+        clerk_user_id="user_2",
+        email="other@example.com",
+        username="other",
+        callsign="K1NEW",
+        region=0,
+    )
+    db_session.add(other_user)
+    db_session.commit()
+    db_session.refresh(other_user)
+    db_session.add(
+        LinkedCallsigns(
+            user_id=other_user.id,
+            old_callsign="N0CALL",
+            new_callsign="K1NEW",
+        )
+    )
+    db_session.commit()
+
+    response = client.patch(
+        "/user/profile",
+        json={"callsign": "n0call", "region": 1},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Callsign N0CALL is already taken"}
+
+
+def test_patch_user_profile_rejects_invalid_payload(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+
+    response = client.patch(
+        "/user/profile",
+        json={"callsign": "4Z1ABC", "region": 4},
+    )
+
+    assert response.status_code == 422
+
+
+def test_patch_user_profile_returns_404_when_update_target_missing(
+    client, db_session, monkeypatch
+):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    monkeypatch.setattr(
+        users_router_module.user_service,
+        "update_user_profile",
+        lambda **kwargs: None,
+    )
+
+    response = client.patch(
+        "/user/profile",
+        json={"callsign": "N0CALL", "region": 1},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+
+def test_get_qsos_by_user_returns_area_and_region_totals(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    db_session.add_all(
+        [
+            QSOLogs(date="20240101", freq=14.25, spotter="4Z1ABC", dx="W1ABC", area="H08HF"),
+            QSOLogs(date="20240102", freq=7.1, spotter="4Z1ABC", dx="W2ABC", area="J05HF"),
+            QSOLogs(date="20240103", freq=21.3, spotter="4Z1ABC", dx="W3ABC", area="A22BS"),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/qsos/by-user")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["callsign"] == "4Z1ABC"
+    assert body["callsigns"] == ["4Z1ABC"]
+    assert set(body["areas"]) == {"H08HF", "J05HF", "A22BS"}
+    assert set(body["regions"]) == {"HF", "BS"}
+    assert body["total_areas"] == 3
+    assert body["total_regions"] == 2
+
+
+def test_get_qsos_by_user_counts_linked_callsigns_once(client, db_session):
+    user = create_user(db_session, callsign="N0CALL", region=1)
+    db_session.add(
+        LinkedCallsigns(
+            user_id=user.id,
+            old_callsign="4Z1ABC",
+            new_callsign="N0CALL",
+        )
+    )
+    db_session.add_all(
+        [
+            QSOLogs(
+                date="20240101",
+                freq=14.25,
+                spotter="4Z1ABC",
+                dx="W1ABC",
+                area="H08HF",
+            ),
+            QSOLogs(
+                date="20240102",
+                freq=7.1,
+                spotter="N0CALL",
+                dx="W2ABC",
+                area="H08HF",
+            ),
+            QSOLogs(
+                date="20240103",
+                freq=21.3,
+                spotter="N0CALL",
+                dx="W3ABC",
+                area="A22BS",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/qsos/by-user")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["callsign"] == "N0CALL"
+    assert set(body["callsigns"]) == {"4Z1ABC", "N0CALL"}
+    assert set(body["areas"]) == {"H08HF", "A22BS"}
+    assert set(body["regions"]) == {"HF", "BS"}
+    assert body["total_areas"] == 2
+    assert body["total_regions"] == 2
+
+
+def test_get_qsos_by_user_returns_404_for_missing_user(client):
+    response = client.get("/qsos/by-user")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+
+def test_get_qsos_by_user_requires_callsign(client, db_session):
+    create_user(db_session, callsign=None, region=1)
+
+    response = client.get("/qsos/by-user")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "User has no callsign assigned"}
+
+
+def test_get_qso_logs_by_user_returns_current_and_linked_callsign_qsos(
+    client, db_session
+):
+    user = create_user(db_session, callsign="N0CALL", region=1)
+    db_session.add(
+        LinkedCallsigns(
+            user_id=user.id,
+            old_callsign="4Z1ABC",
+            new_callsign="N0CALL",
+        )
+    )
+    old_callsign_qso = QSOLogs(
+        date="20240101",
+        freq=14.25,
+        spotter="4Z1ABC",
+        dx="W1ABC",
+        area="H08HF",
+    )
+    current_callsign_qso = QSOLogs(
+        date="20240103",
+        freq=21.3,
+        spotter="N0CALL",
+        dx="W3ABC",
+        area="A22BS",
+    )
+    unrelated_qso = QSOLogs(
+        date="20240104",
+        freq=7.1,
+        spotter="W9XYZ",
+        dx="W4ABC",
+        area="J05HF",
+    )
+    db_session.add_all([old_callsign_qso, current_callsign_qso, unrelated_qso])
+    db_session.commit()
+
+    response = client.get("/qsos/by-user/logs")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["callsign"] == "N0CALL"
+    assert set(body["callsigns"]) == {"4Z1ABC", "N0CALL"}
+    assert body["total_qsos"] == 2
+    assert body["page"] == 1
+    assert body["page_size"] == 50
+    assert body["total_pages"] == 1
+    assert body["qsos"] == [
+        {
+            "id": current_callsign_qso.id,
+            "date": "20240103",
+            "freq": 21.3,
+            "spotter": "N0CALL",
+            "dx": "W3ABC",
+            "area": "A22BS",
+        },
+        {
+            "id": old_callsign_qso.id,
+            "date": "20240101",
+            "freq": 14.25,
+            "spotter": "4Z1ABC",
+            "dx": "W1ABC",
+            "area": "H08HF",
+        },
+    ]
+
+
+def test_get_qso_logs_by_user_paginates_qsos(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    db_session.add_all(
+        [
+            QSOLogs(
+                date=f"202401{i:02d}",
+                freq=14.25,
+                spotter="4Z1ABC",
+                dx=f"W{i}ABC",
+                area=f"A{i:02d}HF",
+            )
+            for i in range(1, 52)
+        ]
+    )
+    db_session.commit()
+
+    first_page_response = client.get("/qsos/by-user/logs")
+    second_page_response = client.get("/qsos/by-user/logs?page=2&page_size=50")
+
+    assert first_page_response.status_code == 200
+    first_page = first_page_response.json()
+    assert first_page["total_qsos"] == 51
+    assert first_page["page"] == 1
+    assert first_page["page_size"] == 50
+    assert first_page["total_pages"] == 2
+    assert len(first_page["qsos"]) == 50
+    assert first_page["qsos"][0]["date"] == "20240151"
+    assert first_page["qsos"][-1]["date"] == "20240102"
+
+    assert second_page_response.status_code == 200
+    second_page = second_page_response.json()
+    assert second_page["total_qsos"] == 51
+    assert second_page["page"] == 2
+    assert second_page["page_size"] == 50
+    assert second_page["total_pages"] == 2
+    assert len(second_page["qsos"]) == 1
+    assert second_page["qsos"][0]["date"] == "20240101"
+
+
+def test_get_qso_logs_by_user_rejects_too_large_page_size(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+
+    response = client.get("/qsos/by-user/logs?page_size=501")
+
+    assert response.status_code == 422
+
+
+def test_get_qso_logs_by_user_returns_404_for_missing_user(client):
+    response = client.get("/qsos/by-user/logs")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+
+def test_get_qso_logs_by_user_requires_callsign(client, db_session):
+    create_user(db_session, callsign=None, region=1)
+
+    response = client.get("/qsos/by-user/logs")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "User has no callsign assigned"}
+
+
+def test_get_areas_returns_distinct_areas_for_spotter(client, db_session):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    db_session.add_all(
+        [
+            QSOLogs(
+                date="20240101",
+                freq=14.25,
+                spotter="4Z1ABC",
+                dx="W1ABC",
+                area="H08HF",
+            ),
+            QSOLogs(
+                date="20240102",
+                freq=7.1,
+                spotter="4Z1ABC",
+                dx="W2ABC",
+                area="J05HF",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/areas/4Z1ABC")
+
+    assert response.status_code == 200
+    assert set(response.json()["areas"]) == {"H08HF", "J05HF"}
+
+
+def test_upload_file_requires_user_callsign(client, db_session):
+    create_user(db_session, callsign=None, region=1)
+
+    response = client.post(
+        "/read-file",
+        files={"file": ("log.adi", b"<EOH>", "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "User callsign not found. Please update your profile first."
+    }
+
+
+def test_upload_file_parses_and_returns_inserted_qsos(
+    client, db_session, monkeypatch
+):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    captured_qsos = []
+
+    def fake_read_from_file(path):
+        assert Path(path).exists()
+        return (
+            [
+                (
+                    "<QSO_DATE:8>20240101"
+                    "<FREQ:6>14.250"
+                    "<STATION_CALLSIGN:6>4Z1ABC"
+                    "<CALL:5>W1ABC"
+                    "<COMMENT:5>H08HF"
+                )
+            ],
+            {},
+        )
+
+    def fake_insert_qsos(db, qsos):
+        captured_qsos.extend(qsos)
+        return [
+            SimpleNamespace(
+                id=10,
+                date="20240101",
+                freq=14.25,
+                spotter="4Z1ABC",
+                dx="W1ABC",
+                area="H08HF",
+            )
+        ]
+
+    monkeypatch.setattr(main_module.adif_io, "read_from_file", fake_read_from_file)
+    monkeypatch.setattr(main_module, "insert_qsos", fake_insert_qsos)
+
+    response = client.post(
+        "/read-file",
+        files={"file": ("unit_upload.adi", b"ignored", "text/plain")},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total_qsos": 1,
+        "callsign": "4Z1ABC",
+        "qsos": [
+            {
+                "id": 10,
+                "date": "20240101",
+                "freq": 14.25,
+                "spotter": "4Z1ABC",
+                "dx": "W1ABC",
+                "area": "H08HF",
+            }
+        ],
+    }
+    assert len(captured_qsos) == 1
+    assert captured_qsos[0].model_dump() == {
+        "date": "20240101",
+        "freq": 14.25,
+        "spotter": "4Z1ABC",
+        "dx": "W1ABC",
+        "area": "H08HF",
+    }
+    assert not Path("temp_unit_upload.adi").exists()

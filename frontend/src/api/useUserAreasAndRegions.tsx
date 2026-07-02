@@ -5,6 +5,7 @@ import { queryKeys } from "../lib/queryKeys";
 
 interface UserAreasAndRegions {
   callsign: string;
+  callsigns: string[];
   areas: string[];
   regions: string[];
   total_areas: number;
