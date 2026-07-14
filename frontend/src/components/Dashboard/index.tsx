@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { SignOutButton } from "@clerk/clerk-react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import UserDetailsDialog from "../UserDetailsDialog";
 import AreasRegionsDialog from "../AreasRegionsDialog";
 import Map from "../Map";
@@ -32,7 +34,13 @@ const Dashboard = () => {
   const [regionsDialogOpen, setRegionsDialogOpen] = useState(false);
   const [allowClose, setAllowClose] = useState(false);
 
-  const { profile, isProfileComplete, isLoading } = useProfile();
+  const {
+    profile,
+    isProfileComplete,
+    isLoading,
+    isError: isProfileError,
+    error: profileError,
+  } = useProfile();
   const {
     data: userAreasData,
     isLoading: areasLoading,
@@ -40,6 +48,12 @@ const Dashboard = () => {
   } = useUserAreasAndRegions();
 
   const requiredAmounts = getRequiredAmounts(profile?.region);
+  const countedCallsigns = userAreasData?.callsigns ?? [];
+  const shouldRequireProfile =
+    !isLoading && !isProfileError && !isProfileComplete;
+  const profileErrorMessage =
+    profileError instanceof Error ? profileError.message : "";
+  const profileLimitReached = profileErrorMessage.includes("User limit");
 
   // Check if all requirements are met
   const areasComplete =
@@ -60,15 +74,13 @@ const Dashboard = () => {
 
   // Automatically prompt user to complete profile if incomplete
   useEffect(() => {
-    // Wait for profile to load, then check if it's complete
-    if (!isLoading && !isProfileComplete) {
+    if (shouldRequireProfile) {
       setIsDialogOpen(true);
     }
-  }, [isLoading, isProfileComplete]);
+  }, [shouldRequireProfile]);
 
   const handleDialogClose = () => {
-    // Only allow closing if profile is complete or explicitly allowed
-    if (!isProfileComplete && !allowClose) {
+    if (shouldRequireProfile && !allowClose) {
       toast.warning("Profile Required", {
         description: "Please complete your profile to continue.",
         duration: 3000,
@@ -96,6 +108,28 @@ const Dashboard = () => {
     newParams.delete("setup");
     setSearchParams(newParams);
   };
+
+  if (!profile && isProfileError) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-md">
+          <h1 className="text-2xl font-bold text-foreground">
+            {profileLimitReached ? "Registration Closed" : "Profile Unavailable"}
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {profileLimitReached
+              ? "The user limit has been reached, so new accounts cannot be created right now. Existing users can still sign in."
+              : "We could not load your profile. Please try again later."}
+          </p>
+          <SignOutButton>
+            <Button className="mt-5" variant="outline">
+              Sign Out
+            </Button>
+          </SignOutButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-6">
@@ -178,6 +212,23 @@ const Dashboard = () => {
                     ? "N/A"
                     : (userAreasData?.callsign ?? "Not Set")}
               </p>
+              {countedCallsigns.length > 1 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Counting QSOs from
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {countedCallsigns.map((callsign) => (
+                      <span
+                        key={callsign}
+                        className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground"
+                      >
+                        {callsign}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

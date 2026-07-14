@@ -2,24 +2,20 @@ import { Button } from "@ui/button";
 import React, { useRef, useState, useCallback } from "react";
 import useAdifUpload from "@/hooks/useFileUpload";
 import { Upload } from "lucide-react";
-
-type QSO = {
-  id?: number;
-  date: string;
-  freq: number;
-  dx: string;
-  area: string;
-};
+import QsoTable, { type Qso } from "./QsoTable";
 
 type UploadResponse = {
   total_qsos: number;
   callsign: string;
-  qsos: QSO[];
+  qsos: Qso[];
 };
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 const FileUploader = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const {
     mutate: uploadFile,
@@ -32,12 +28,23 @@ const FileUploader = () => {
   const handleClick = () => {
     reset();
     setUploadResult(null);
+    setFileError(null);
     fileInputRef.current?.click();
   };
 
   const processFile = useCallback((file: File) => {
     reset();
     setUploadResult(null);
+    if (!file.name.toLowerCase().endsWith(".adi")) {
+      setFileError("Only .adi files can be uploaded.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setFileError("File is too large. Maximum size is 10MB.");
+      return;
+    }
+
+    setFileError(null);
     uploadFile(
       { file },
       {
@@ -104,7 +111,10 @@ const FileUploader = () => {
               {isDragging ? "Drop your file here" : "Drag & drop your ADIF file here"}
             </p>
             <p className="text-sm text-muted-foreground">
-              or click to browse (.adif, .txt, .adi)
+              or click to browse (.adi)
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Maximum file size: 10MB
             </p>
             <Button
               onClick={(e) => { e.stopPropagation(); handleClick(); }}
@@ -118,7 +128,7 @@ const FileUploader = () => {
 
           <input
             type="file"
-            accept=".adif,.txt,.adi"
+            accept=".adi"
             ref={fileInputRef}
             onChange={handleFileChange}
             style={{ display: "none" }}
@@ -133,13 +143,13 @@ const FileUploader = () => {
           )}
 
           {/* Error State */}
-          {isError && (
+          {(isError || fileError) && (
             <div className="w-full p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
               <div className="flex items-start space-x-2">
                 <div className="text-destructive font-semibold">Upload Failed</div>
               </div>
               <p className="text-destructive text-sm mt-1">
-                {error?.message || "An error occurred while uploading the file"}
+                {fileError || error?.message || "An error occurred while uploading the file"}
               </p>
             </div>
           )}
@@ -160,50 +170,7 @@ const FileUploader = () => {
               </p>
             </div>
 
-            {/* QSO Table */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-md">
-              <div className="px-6 py-4 bg-secondary border-b border-border">
-                <h3 className="text-lg font-semibold">Uploaded QSOs</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                        Date
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                        Frequency
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                        DX Station
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                        Area
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {uploadResult.qsos.map((qso, index) => (
-                      <tr key={qso.id || index} className="hover:bg-accent/10 transition-colors">
-                        <td className="px-4 py-3 text-sm">{qso.date}</td>
-                        <td className="px-4 py-3 text-sm">
-                          {qso.freq.toFixed(3)} MHz
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          {qso.dx}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30">
-                            {qso.area}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <QsoTable title="Uploaded QSOs" qsos={uploadResult.qsos} />
           </div>
         )}
       </div>

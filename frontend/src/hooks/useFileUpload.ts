@@ -1,12 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
+import {
+  USER_AREAS_REGIONS_QUERY_KEY,
+  USER_QSOS_QUERY_KEY,
+} from "@/api/queryKeys";
 import { apiClient } from "@/lib/api";
-import { queryKeys } from "@/lib/queryKeys";
 
 type QSO = {
   id?: number;
   date: string;
   freq: number;
+  spotter: string;
   dx: string;
   area: string;
 };
@@ -40,8 +44,8 @@ const useAdifUpload = () => {
       return postAdif(file, token);
     },
     onSuccess: () => {
-      // Invalidate user areas and regions query to refresh dashboard
-      queryClient.invalidateQueries({ queryKey: queryKeys.userAreasAndRegions });
+      void queryClient.invalidateQueries({ queryKey: USER_AREAS_REGIONS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_QSOS_QUERY_KEY });
     },
   });
 };

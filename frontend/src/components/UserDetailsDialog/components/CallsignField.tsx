@@ -1,12 +1,13 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
+import { UserDetailsFormData } from "..";
 
 interface CallsignFieldProps {
   label: string;
   name: "callsign" | "callsignConfirm";
-  register: UseFormRegister<any>;
-  errors: FieldErrors;
+  register: UseFormRegister<UserDetailsFormData>;
+  errors: FieldErrors<UserDetailsFormData>;
   placeholder?: string;
 }
 

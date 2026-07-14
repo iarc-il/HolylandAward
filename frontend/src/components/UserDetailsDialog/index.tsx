@@ -22,6 +22,7 @@ const userDetailsSchema = z
   .object({
     callsign: z
       .string()
+      .trim()
       .min(1, "Callsign is required")
       .max(10, "Callsign too long")
       .transform((val) => val.toUpperCase())
@@ -32,9 +33,18 @@ const userDetailsSchema = z
             /^[A-Z0-9]+$/,
             "Callsign must contain only letters and numbers",
           ),
+      )
+      .pipe(
+        z
+          .string()
+          .regex(
+            /^(?=.*[A-Z])(?=.*\d).+$/,
+            "Callsign must contain both letters and numbers",
+          ),
       ),
     callsignConfirm: z
       .string()
+      .trim()
       .min(1, "Please confirm your callsign")
       .transform((val) => val.toUpperCase()),
     region: z.enum(["0", "1", "2", "3"], { message: "Please select a region" }),
@@ -47,7 +57,7 @@ const userDetailsSchema = z
     path: ["callsignConfirm"],
   });
 
-type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
+export type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
 
 interface UserDetailsDialogProps {
   isOpen: boolean;

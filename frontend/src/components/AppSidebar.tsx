@@ -16,14 +16,17 @@ import {
 import {
   Home,
   Upload,
+  Radio,
   FileText,
   Settings,
   LogOut,
   Mail,
+  ShieldCheck,
 } from "lucide-react";
 import { SignOutButton } from "@clerk/clerk-react";
 import ContactDialog from "./ContactDialog";
 import logo from "@/assets/logo.svg";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 // Menu items for the sidebar
 const items = [
@@ -38,20 +41,33 @@ const items = [
     icon: Upload,
   },
   {
+    title: "My QSOs",
+    url: "/my-qsos",
+    icon: Radio,
+  },
+  {
     title: "Rules & Info",
     url: "/rules",
     icon: FileText,
   },
-  // {
-  //   title: "Settings",
-  //   url: "/settings",
-  //   icon: Settings,
-  // },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
 ];
+
+const adminItem = {
+  title: "Admin",
+  url: "/admin",
+  icon: ShieldCheck,
+};
 
 const AppSidebar = () => {
   const [showContactDialog, setShowContactDialog] = useState(false);
   const { setOpenMobile, isMobile } = useSidebar();
+  const { isAdmin } = useIsAdmin();
+  const visibleItems = isAdmin ? [...items, adminItem] : items;
 
   const closeMobileSidebar = () => {
     if (isMobile) {
@@ -70,18 +86,23 @@ const AppSidebar = () => {
         <div className="px-2 py-3 flex flex-col items-center gap-2">
           <img src={logo} alt="Holyland Award Logo" className="h-20 w-auto" />
           <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
-        
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-semibold">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sm font-semibold">
+            Navigation
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <Link to={item.url} className="transition-all duration-200" onClick={closeMobileSidebar}>
+                    <Link
+                      to={item.url}
+                      className="transition-all duration-200"
+                      onClick={closeMobileSidebar}
+                    >
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>

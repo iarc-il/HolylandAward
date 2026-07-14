@@ -1,8 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Assistant:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
-
-/* Import Hebrew-supporting fonts */
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Assistant:wght@300;400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -230,6 +228,12 @@
   color: var(--warning-foreground);
   padding: 1rem 1.5rem;
   border-radius: var(--radius);
+}
+
+.clerk-hide-sign-up .cl-footerAction,
+.clerk-hide-sign-up .cl-footerActionText,
+.clerk-hide-sign-up .cl-footerActionLink {
+  display: none !important;
 }
 
 /* Utility classes for spacing */

@@ -89,7 +89,8 @@ version_path_separator = os
 # are written from script.py.mako
 # output_encoding = utf-8
 
-sqlalchemy.url = postgresql://yoav.katzman@localhost:5433/holyland_award
+# Database URL is loaded from DATABASE_URL in .env by alembic/env.py.
+sqlalchemy.url =
 
 
 [post_write_hooks]
@@ -156,9 +157,15 @@ from sqlalchemy import pool
 from alembic import context
 import sys
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BASE_DIR / ".env")
 
 # Add src to path so we can import our models
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(str(BASE_DIR / "src"))
 
 from database import Base
 from qsos.models import QSOLogs  # Import all models here
@@ -166,6 +173,14 @@ from qsos.models import QSOLogs  # Import all models here
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    raise RuntimeError(
+        "DATABASE_URL is not set. Add it to backend/.env or export it before running Alembic."
+    )
+
+config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

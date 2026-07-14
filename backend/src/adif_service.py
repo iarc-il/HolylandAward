@@ -4,9 +4,11 @@ from qsos.schema import QSO
 
 
 class AdifService:
-    def __init__(self, qsos, spotter_callsign):
+    def __init__(self, qsos, spotter_callsigns: list[str]):
         self.qsos = [self._get_required_fields(self._qso_to_dict(qso)) for qso in qsos]
-        self.spotter_callsign = spotter_callsign
+        self.spotter_callsigns = {
+            self._clean_callsign(callsign) for callsign in spotter_callsigns if callsign
+        }
 
     def _qso_to_dict(self, qso) -> dict:
         """
@@ -75,6 +77,8 @@ class AdifService:
         if not callsign:
             return ""
 
+        callsign = callsign.strip().upper()
+
         # Find the forward slash and take everything before it
         slash_index = callsign.find("/")
         if slash_index != -1:
@@ -88,10 +92,10 @@ class AdifService:
         station_callsign = self._clean_callsign(qso_dict.get("STATION_CALLSIGN", ""))
         operator = self._clean_callsign(qso_dict.get("OPERATOR", ""))
 
-        if station_callsign == self.spotter_callsign:
-            return self.spotter_callsign
-        elif operator == self.spotter_callsign:
-            return self.spotter_callsign
+        if station_callsign in self.spotter_callsigns:
+            return station_callsign
+        elif operator in self.spotter_callsigns:
+            return operator
         return ""  # No spotter found
 
     def get_valid_entries(self) -> list[QSO]:
@@ -100,12 +104,16 @@ class AdifService:
         """
         valid_entries = []
         for qso in self.qsos:
+            spotter = self._get_spotter(qso)
+            if not spotter:
+                continue
+
             areas = self._get_areas(qso)
             for area in areas:
                 entry = {
                     "date": qso.get("QSO_DATE", ""),
                     "freq": qso.get("FREQ", ""),
-                    "spotter": self._get_spotter(qso),
+                    "spotter": spotter,
                     "dx": self._clean_callsign(qso.get("CALL", "")),
                     "area": area,
                 }

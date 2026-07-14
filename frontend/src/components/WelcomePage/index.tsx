@@ -4,16 +4,38 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import awardCert from "@/assets/award_gold_comp.png";
 import logo from "@/assets/logo.svg";
+import { useRegistrationStatus } from "@/api/useUserLimit";
 
 const WelcomePage = () => {
   const [showSignIn, setShowSignIn] = useState(false);
   const navigate = useNavigate();
+  const { data: registrationStatus } = useRegistrationStatus();
+  const registrationFull = registrationStatus?.limit_reached ?? false;
+  const hideSignUp = registrationStatus ? registrationFull : true;
+  const signInAppearance = hideSignUp
+    ? {
+        elements: {
+          footerAction: "hidden",
+          footerActionLink: "hidden",
+          footerActionText: "hidden",
+        },
+      }
+    : undefined;
 
   if (showSignIn) {
     return (
       <div className="flex-1 h-screen flex items-center justify-center relative z-10">
-        <div className="bg-card p-8 rounded-xl shadow-lg border border-border">
-          <SignIn />
+        <div
+          className={`bg-card p-8 rounded-xl shadow-lg border border-border ${
+            hideSignUp ? "clerk-hide-sign-up" : ""
+          }`}
+        >
+          {registrationFull && (
+            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              Registration is currently full. Existing users can still sign in.
+            </div>
+          )}
+          <SignIn appearance={signInAppearance} />
         </div>
       </div>
     );
@@ -64,6 +86,14 @@ const WelcomePage = () => {
             Sign In
           </Button>
         </div>
+
+        {registrationFull && registrationStatus?.user_limit !== null && (
+          <div className="mx-auto mt-4 max-w-md rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+            Registration is full: {registrationStatus?.current_users} of{" "}
+            {registrationStatus?.user_limit} non-admin user slots are in use.
+            Existing users can still sign in.
+          </div>
+        )}
 
         {/* Info Section */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-left flex-shrink-0">

@@ -23,7 +23,11 @@ export const apiClient = {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      const detail = errorData.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join("; ")
+        : detail || errorData.message;
+      throw new Error(message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     return response;
@@ -33,7 +37,7 @@ export const apiClient = {
     return this.fetch(endpoint, { method: 'GET', headers });
   },
 
-  async post(endpoint: string, data?: any, headers?: HeadersInit) {
+  async post(endpoint: string, data?: Record<string, unknown>, headers?: HeadersInit) {
     return this.fetch(endpoint, {
       method: 'POST',
       headers,
@@ -41,7 +45,7 @@ export const apiClient = {
     });
   },
 
-  async patch(endpoint: string, data?: any, headers?: HeadersInit) {
+  async patch(endpoint: string, data?: Record<string, unknown>, headers?: HeadersInit) {
     return this.fetch(endpoint, {
       method: 'PATCH',
       headers,
@@ -49,7 +53,7 @@ export const apiClient = {
     });
   },
 
-  async put(endpoint: string, data?: any, headers?: HeadersInit) {
+  async put(endpoint: string, data?: Record<string, unknown>, headers?: HeadersInit) {
     return this.fetch(endpoint, {
       method: 'PUT',
       headers,
@@ -72,7 +76,11 @@ export const apiClient = {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      const detail = errorData.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join("; ")
+        : detail || errorData.message;
+      throw new Error(message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     return response;
