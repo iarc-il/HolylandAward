@@ -10,6 +10,8 @@ type UploadResponse = {
   qsos: Qso[];
 };
 
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
 const FileUploader = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
@@ -35,6 +37,10 @@ const FileUploader = () => {
     setUploadResult(null);
     if (!file.name.toLowerCase().endsWith(".adi")) {
       setFileError("Only .adi files can be uploaded.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setFileError("File is too large. Maximum size is 10MB.");
       return;
     }
 
@@ -106,6 +112,9 @@ const FileUploader = () => {
             </p>
             <p className="text-sm text-muted-foreground">
               or click to browse (.adi)
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Maximum file size: 10MB
             </p>
             <Button
               onClick={(e) => { e.stopPropagation(); handleClick(); }}
