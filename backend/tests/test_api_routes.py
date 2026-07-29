@@ -605,8 +605,8 @@ def test_upload_file_parses_and_returns_inserted_qsos(
     create_user(db_session, callsign="4Z1ABC", region=1)
     captured_qsos = []
 
-    def fake_read_from_file(path):
-        assert Path(path).exists()
+    def fake_read_from_string(adif_string):
+        assert adif_string == "ignored"
         return (
             [
                 (
@@ -633,7 +633,7 @@ def test_upload_file_parses_and_returns_inserted_qsos(
             )
         ]
 
-    monkeypatch.setattr(main_module.adif_io, "read_from_file", fake_read_from_file)
+    monkeypatch.setattr(main_module.adif_io, "read_from_string", fake_read_from_string)
     monkeypatch.setattr(main_module, "insert_qsos", fake_insert_qsos)
 
     response = client.post(

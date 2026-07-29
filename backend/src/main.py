@@ -124,7 +124,11 @@ async def upload_file(
     with open(f"temp_{file.filename}", "wb") as f:
         f.write(contents)
 
-    qsos, header = adif_io.read_from_file(f"temp_{file.filename}")
+    # ADIF field lengths are byte counts, but adif_io slices by Python
+    # character count. Decoding as latin-1 keeps a 1:1 byte-to-character
+    # mapping so multi-byte UTF-8 content (e.g. Hebrew names/comments from
+    # N1MM) doesn't shift field boundaries and corrupt the parse.
+    qsos, header = adif_io.read_from_string(contents.decode("latin-1"))
     adif_service = AdifService(qsos, spotter_callsigns=spotter_callsigns)
     valid_entries = adif_service.get_valid_entries()
 
