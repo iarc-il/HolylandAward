@@ -18,6 +18,8 @@ from users.repository import (
     add_linked_callsign,
     update_user_region,
     search_users,
+    count_users,
+    list_users_paginated,
 )
 from users.schema import (
     CallsignChangeRequestCreate,
@@ -318,6 +320,25 @@ async def update_region(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return UserResponse.model_validate(updated_user)
+
+
+@router.get("/admin/users")
+async def admin_list_users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db),
+    admin_id: str = Depends(verify_admin),
+):
+    total = count_users(db)
+    users = list_users_paginated(db, page, page_size)
+    total_pages = ceil(total / page_size) if total else 0
+    return {
+        "users": [UserResponse.model_validate(u) for u in users],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 @router.get("/admin/users/search")

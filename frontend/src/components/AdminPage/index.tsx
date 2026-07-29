@@ -19,6 +19,7 @@ import {
 } from "@/api/useCallsignRequests";
 import { useAdminUserSearch } from "@/api/useAdminUserSearch";
 import { useAdminUserQsos } from "@/api/useAdminUserQsos";
+import { useAdminUsersList } from "@/api/useAdminUsersList";
 import { useConnectedUsers } from "@/api/useConnectedUsers";
 import { useAdminUserLimit, useUpdateUserLimit } from "@/api/useUserLimit";
 import QsoTable from "@/components/QsoTable";
@@ -252,6 +253,8 @@ const AdminPage = () => {
 
       <UserLimitSection />
 
+      <AllUsersSection />
+
       <UserLogsSection />
 
       <Dialog
@@ -445,6 +448,85 @@ const UserLimitSection = () => {
           </form>
         </div>
       ) : null}
+    </section>
+  );
+};
+
+const AllUsersSection = () => {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  const { data, isLoading, isError } = useAdminUsersList(page, pageSize);
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1);
+  };
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-6 shadow-md">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Registered Users</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            All users registered in the system.
+          </p>
+        </div>
+        <Users className="h-5 w-5 text-muted-foreground" />
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading users...
+        </div>
+      ) : isError ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Could not load users.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {data?.users.map((user) => (
+              <div
+                key={user.clerk_user_id}
+                className="rounded-lg border border-border bg-background p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    {user.callsign && (
+                      <p className="font-semibold uppercase">
+                        {user.callsign}
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {user.email || user.username || user.clerk_user_id}
+                    </p>
+                  </div>
+                  {user.region !== null && user.region !== undefined && (
+                    <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                      Region {user.region}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {data && data.total > 0 && (
+            <PaginationControls
+              page={data.page}
+              totalPages={data.total_pages}
+              totalItems={data.total}
+              pageSize={data.page_size}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              itemLabel="users"
+            />
+          )}
+        </div>
+      )}
     </section>
   );
 };
