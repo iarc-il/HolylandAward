@@ -102,7 +102,7 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-12">
       <div className="space-y-2">
         <h1 className="text-4xl md:text-5xl font-bold text-foreground">
           Admin
@@ -455,8 +455,32 @@ const UserLimitSection = () => {
 const AllUsersSection = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const { data, isLoading, isError } = useAdminUsersList(page, pageSize);
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchQuery]);
+
+  const isSearching = debouncedQuery.length > 0;
+
+  const { data: listData, isLoading: listLoading, isError: listError } =
+    useAdminUsersList(page, pageSize);
+  const {
+    data: searchData,
+    isLoading: searchLoading,
+    isError: searchError,
+  } = useAdminUserSearch(debouncedQuery);
+
+  const users = isSearching ? searchData?.users : listData?.users;
+  const total = isSearching ? searchData?.total : listData?.total;
+  const isLoading = isSearching ? searchLoading : listLoading;
+  const isError = isSearching ? searchError : listError;
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -475,19 +499,33 @@ const AllUsersSection = () => {
         <Users className="h-5 w-5 text-muted-foreground" />
       </div>
 
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search by callsign, email, or username..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading users...
+          {isSearching ? "Searching..." : "Loading users..."}
         </div>
       ) : isError ? (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Could not load users.
         </div>
+      ) : isSearching && total === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No users found matching "{debouncedQuery}".
+        </p>
       ) : (
         <div className="space-y-4">
           <div className="space-y-2">
-            {data?.users.map((user) => (
+            {users?.map((user) => (
               <div
                 key={user.clerk_user_id}
                 className="rounded-lg border border-border bg-background p-3"
@@ -513,12 +551,12 @@ const AllUsersSection = () => {
             ))}
           </div>
 
-          {data && data.total > 0 && (
+          {!isSearching && listData && listData.total > 0 && (
             <PaginationControls
-              page={data.page}
-              totalPages={data.total_pages}
-              totalItems={data.total}
-              pageSize={data.page_size}
+              page={listData.page}
+              totalPages={listData.total_pages}
+              totalItems={listData.total}
+              pageSize={listData.page_size}
               onPageChange={setPage}
               onPageSizeChange={handlePageSizeChange}
               pageSizeOptions={PAGE_SIZE_OPTIONS}
