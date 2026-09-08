@@ -10,39 +10,38 @@ and dashboard. FastAPI + PostgreSQL backend, React 19 + Vite frontend, Clerk for
 
 ## Commands
 
-### Backend (`backend/`)
+Everything runs in Docker — the project has no supported native workflow. Source dirs are
+volume-mounted, so both services hot-reload.
 
 ```bash
-uv sync                                            # install deps
-uv run src/main.py                                 # dev server on :1293 (reload on)
-uv run alembic upgrade head                        # apply migrations
-uv run alembic revision --autogenerate -m "msg"    # new migration after model change
-uv run pytest                                      # all tests
-uv run pytest tests/test_qsos_service.py           # one file
-uv run pytest tests/test_api_routes.py::test_name  # one test
+docker volume create holyland_postgres_data   # one time; the volume is declared external
+docker compose up                             # frontend :5173, backend :1293, postgres :5434
+docker compose logs -f backend
 ```
 
-### Frontend (`frontend/`)
-
 ```bash
-npm install
-npm run dev      # Vite on :5173
-npm run build    # tsc -b && vite build — typecheck runs here, not in dev
-npm run lint     # eslint
+# Tests (43, in-memory SQLite)
+docker compose exec backend pytest
+docker compose exec backend pytest tests/test_adif_service.py
+docker compose exec backend pytest tests/test_users_service.py::test_name
+
+# Frontend — typechecking happens in build, not dev
+docker compose exec frontend npm run lint
+docker compose exec frontend npm run build
+
+# Migrations (also applied automatically on container start)
+docker compose exec backend alembic upgrade head
+docker compose exec backend alembic revision --autogenerate -m "msg"
+
+docker compose exec db psql -U holyland_user -d holyland_award
+docker compose up --build                     # after a Dockerfile or dependency change
 ```
 
 There is no backend linter/formatter configured.
 
-### Full stack via Docker
-
-```bash
-docker-compose up          # frontend :5173, backend :1293, postgres :5434
-docker-compose exec backend alembic upgrade head
-docker-compose exec db psql -U holyland_user -d holyland_award
-```
-
-Note `docker-compose.yml` mounts the **external** `holyland_postgres_data` volume, so
-`docker-compose down -v` touches real data — see [DOCKER.md](DOCKER.md).
+Two Docker gotchas: the Postgres volume is **external**, so `docker compose down -v` does
+*not* reset the database (remove and recreate the volume instead); and pytest is only in the
+dev image — `backend/Dockerfile` (production) deliberately installs runtime deps only.
 
 ## Backend architecture
 

@@ -16,8 +16,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 # Copy dependency files
 COPY pyproject.toml uv.toml ./
 
-# Install dependencies
-RUN uv pip install --system -r pyproject.toml
+# Install dependencies, including the dev group (pytest) so tests can run in-container
+RUN uv pip install --system -r pyproject.toml --group dev
 
 # Copy application code (overridden by volume mount in docker-compose.yml)
 COPY . .

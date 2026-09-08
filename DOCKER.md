@@ -7,10 +7,10 @@ This project is now fully dockerized for easy development and deployment.
 Two workflows automatically build and push Docker images to
 **GitHub Container Registry (GHCR)** whenever you push to a branch:
 
-| Branch | Workflow | Images pushed |
-|--------|----------|---------------|
-| `dev`  | `deploy-dev.yml`  | `backend:dev`, `frontend:dev` |
-| `main` | `deploy-prod.yml` | `backend:latest`, `frontend:latest` |
+| Branch   | Workflow | Images pushed |
+|----------|----------|---------------|
+| `dev`    | `deploy-dev.yml`  | `backend:dev`, `frontend:dev` |
+| `master` | `deploy-prod.yml` | `backend:latest`, `frontend:latest`, `backend:<sha>`, `frontend:<sha>` |
 
 Images are published to:
 ```
@@ -66,7 +66,14 @@ docker compose -f docker-compose.prod.yml up -d
    ```
    Edit `.env` and add your Clerk API keys.
 
-2. **(Optional) Install frontend dependencies locally:**
+2. **Create the database volume (one time):**
+   ```bash
+   docker volume create holyland_postgres_data
+   ```
+   `docker-compose.yml` declares this volume as `external`, so Compose will not create it
+   for you — the first `up` fails without this step.
+
+3. **(Optional) Install frontend dependencies locally:**
    
    If you require company SSO/VPN for npm:
    ```bash
@@ -77,23 +84,15 @@ docker compose -f docker-compose.prod.yml up -d
    
    Otherwise, Docker will install dependencies automatically.
 
-3. **Start all services:**
+4. **Start all services:**
    ```bash
    docker-compose up
    ```
 
-4. **Access the application:**
+5. **Access the application:**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:1293
    - Database: localhost:5434
-
-### VS Code Dev Container
-
-Open the project in VS Code and install the **Dev Containers** extension
-(`ms-vscode-remote.remote-containers`). Then use **"Reopen in Container"** from
-the Command Palette. VS Code will start all services via `docker-compose.yml` and
-attach directly to the backend container with Python and TypeScript tooling
-pre-configured.
 
 ### Production (manual, without CI)
 
@@ -133,9 +132,15 @@ docker-compose logs -f backend  # Just backend
 docker-compose down
 ```
 
-### Stop and remove volumes (⚠️ deletes database data)
+### Reset the database (⚠️ deletes all local data)
+`docker-compose down -v` does **not** clear the database — the Postgres volume is declared
+`external`, and Compose never removes external volumes. Remove and recreate it explicitly:
+
 ```bash
-docker-compose down -v
+docker-compose down
+docker volume rm holyland_postgres_data
+docker volume create holyland_postgres_data
+docker-compose up
 ```
 
 ### Run database migrations manually
@@ -164,11 +169,9 @@ docker-compose up --build backend
 
 ```
 .
-├── .devcontainer/
-│   └── devcontainer.json           # VS Code / GitHub Codespaces dev container
 ├── .github/workflows/
 │   ├── deploy-dev.yml              # CI: push to dev → :dev images on GHCR
-│   └── deploy-prod.yml             # CI: push to main → :latest images on GHCR
+│   └── deploy-prod.yml             # CI: push to master → :latest images on GHCR
 ├── docker-compose.yml              # Local development (volume mounts + hot reload)
 ├── docker-compose.dev-server.yml   # Dev server (pulls :dev images from GHCR)
 ├── docker-compose.prod.yml         # Production server (pulls :latest images from GHCR)
@@ -204,10 +207,11 @@ docker-compose logs db
 
 ### Clean slate
 ```bash
-# Remove all containers, networks, and volumes
-docker-compose down -v
+# Remove containers and networks, then rebuild images from scratch
+docker-compose down
 docker-compose up --build
 ```
+To also wipe the database, see [Reset the database](#reset-the-database--deletes-all-local-data).
 
 ## Environment Variables
 
