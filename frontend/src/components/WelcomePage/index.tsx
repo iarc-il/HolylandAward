@@ -12,15 +12,25 @@ const WelcomePage = () => {
   const { data: registrationStatus } = useRegistrationStatus();
   const registrationFull = registrationStatus?.limit_reached ?? false;
   const hideSignUp = registrationStatus ? registrationFull : true;
-  const signInAppearance = hideSignUp
-    ? {
-        elements: {
-          footerAction: "hidden",
-          footerActionLink: "hidden",
-          footerActionText: "hidden",
-        },
-      }
-    : undefined;
+  const signInAppearance = {
+    variables: {
+      fontSize: "1.05rem",
+      spacingUnit: "1.15rem",
+    },
+    elements: {
+      formFieldInput: {
+        fontSize: "1.2rem",
+        padding: "1.1rem 1rem",
+      },
+      ...(hideSignUp
+        ? {
+            footerAction: "hidden",
+            footerActionLink: "hidden",
+            footerActionText: "hidden",
+          }
+        : {}),
+    },
+  };
 
   if (showSignIn) {
     return (
