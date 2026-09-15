@@ -235,7 +235,7 @@ const Dashboard = () => {
 
         {/* Right Side - Map Section */}
         <div className="flex-1">
-          <div className="border border-border rounded-xl overflow-hidden shadow-md h-[600px] lg:h-[800px]">
+          <div className="border border-border rounded-xl overflow-hidden shadow-md h-[750px] lg:h-[950px]">
             <Map />
           </div>
         </div>
