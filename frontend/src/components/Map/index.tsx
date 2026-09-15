@@ -484,8 +484,45 @@ const Map: React.FC = () => {
               center: { lat: 31.5, lng: 35.0 }, // Center of Israel
               zoom: 8,
               mapTypeId: (window as any).google.maps.MapTypeId.ROADMAP,
+              // Standard fitBounds() only supports integer zoom levels, which
+              // (given the grid is much taller than it is wide, and the
+              // container is much wider than it is tall) leaves large empty
+              // margins - the grid only fills ~70% of the container's height
+              // no matter how it's called. Fractional zoom lets us compute
+              // and apply the exact zoom where the grid's height matches the
+              // container's height precisely, with no wasted margin.
+              isFractionalZoomEnabled: true,
             },
           );
+
+          // Web Mercator Y projection (normalized 0-1, north to south).
+          const mercatorY = (lat: number) => {
+            const rad = (lat * Math.PI) / 180;
+            return (
+              0.5 - Math.log(Math.tan(Math.PI / 4 + rad / 2)) / (2 * Math.PI)
+            );
+          };
+
+          const fitGridToHeight = () => {
+            if (!mapRef.current) return;
+            const containerHeightPx = mapRef.current.clientHeight;
+            if (!containerHeightPx) return;
+            const latFraction = mercatorY(southLat) - mercatorY(northLat);
+            const zoom = Math.log2(containerHeightPx / (latFraction * 256));
+            mapInstance.setCenter({
+              lat: (northLat + southLat) / 2,
+              lng: (westLng + eastLng) / 2,
+            });
+            mapInstance.setZoom(zoom);
+          };
+
+          (window as any).google.maps.event.addListenerOnce(
+            mapInstance,
+            "idle",
+            fitGridToHeight,
+          );
+          window.addEventListener("resize", fitGridToHeight);
+
           setMap(mapInstance);
         }
       } catch (error) {
