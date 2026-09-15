@@ -13,6 +13,8 @@ declare global {
   }
 }
 
+const MAP_TYPE_STORAGE_KEY = "holyland-map-type";
+
 // TextOverlay class factory - creates the class after Google Maps is loaded
 const createTextOverlayClass = () => {
   return class TextOverlay extends (window as any).google.maps.OverlayView {
@@ -478,12 +480,16 @@ const Map: React.FC = () => {
         setTextOverlay(() => TextOverlayClass);
 
         if (mapRef.current) {
+          const savedMapTypeId =
+            localStorage.getItem(MAP_TYPE_STORAGE_KEY) ||
+            (window as any).google.maps.MapTypeId.ROADMAP;
+
           const mapInstance = new (window as any).google.maps.Map(
             mapRef.current,
             {
               center: { lat: 31.5, lng: 35.0 }, // Center of Israel
               zoom: 8,
-              mapTypeId: (window as any).google.maps.MapTypeId.ROADMAP,
+              mapTypeId: savedMapTypeId,
               // Standard fitBounds() only supports integer zoom levels, which
               // (given the grid is much taller than it is wide, and the
               // container is much wider than it is tall) leaves large empty
@@ -494,6 +500,14 @@ const Map: React.FC = () => {
               isFractionalZoomEnabled: true,
             },
           );
+
+          // Remember Map/Satellite choice across sessions.
+          mapInstance.addListener("maptypeid_changed", () => {
+            localStorage.setItem(
+              MAP_TYPE_STORAGE_KEY,
+              mapInstance.getMapTypeId(),
+            );
+          });
 
           // Web Mercator Y projection (normalized 0-1, north to south).
           const mercatorY = (lat: number) => {
