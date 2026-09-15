@@ -246,13 +246,15 @@
   padding: 2rem 0; /* 32px section spacing */
 }
 
-@media (min-width: 768px) {
-  h1 {
-    font-size: 3.75rem; /* 60px on larger screens */
-  }
-  
-  .spacing-section {
-    padding: 3rem 0; /* 48px section spacing on larger screens */
+@layer base {
+  @media (min-width: 768px) {
+    h1 {
+      font-size: 3.75rem; /* 60px on larger screens */
+    }
+
+    .spacing-section {
+      padding: 3rem 0; /* 48px section spacing on larger screens */
+    }
   }
 }
 
