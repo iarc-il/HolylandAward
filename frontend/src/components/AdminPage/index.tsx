@@ -11,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getApiBaseUrl } from "@/lib/api";
+import { getApiBaseUrl, apiClient } from "@/lib/api";
+import { buildQsoReportCsv, downloadCsv } from "@/lib/csv";
+import { getRequiredAmounts } from "@/lib/regionRequirements";
 import {
   usePendingCallsignRequests,
   useApproveCallsignRequest,
@@ -19,15 +21,21 @@ import {
 } from "@/api/useCallsignRequests";
 import { useAdminUserSearch } from "@/api/useAdminUserSearch";
 import { useAdminUserQsos } from "@/api/useAdminUserQsos";
+import type { UserQsosResponse } from "@/api/useUserQsos";
 import { useAdminUsersList } from "@/api/useAdminUsersList";
 import { useConnectedUsers } from "@/api/useConnectedUsers";
 import { useAdminUserLimit, useUpdateUserLimit } from "@/api/useUserLimit";
 import QsoTable from "@/components/QsoTable";
 import QsoStatsCard from "@/components/QsoStatsCard";
 import PaginationControls from "@/components/PaginationControls";
-import { Activity, Shield, ShieldOff, Loader2, ArrowLeft, Search, Users } from "lucide-react";
+import { Activity, Shield, ShieldOff, Loader2, ArrowLeft, Search, Users, ChevronRight, Download } from "lucide-react";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 500];
+
+// Region 0 is Israel; the rest don't have more specific names in the app
+// yet, so they just stay "Region N".
+const REGION_NAMES: Record<number, string> = { 0: "Israel" };
+const getRegionLabel = (region: number) => REGION_NAMES[region] ?? `Region ${region}`;
 
 const AdminPage = () => {
   const { getToken } = useAuth();
@@ -550,7 +558,7 @@ const AllUsersSection = () => {
                   </div>
                   {user.region !== null && user.region !== undefined && (
                     <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      Region {user.region}
+                      {getRegionLabel(user.region)}
                     </span>
                   )}
                 </div>
@@ -577,12 +585,17 @@ const AllUsersSection = () => {
 };
 
 const UserLogsSection = () => {
+  const { getToken } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserLabel, setSelectedUserLabel] = useState("");
+  const [selectedUserRegion, setSelectedUserRegion] = useState<
+    number | null
+  >(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [exporting, setExporting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -606,9 +619,11 @@ const UserLogsSection = () => {
     clerk_user_id: string;
     callsign: string | null;
     email: string | null;
+    region: number | null;
   }) => {
     setSelectedUserId(user.clerk_user_id);
     setSelectedUserLabel(user.callsign || user.email || user.clerk_user_id);
+    setSelectedUserRegion(user.region);
     setPage(1);
     setPageSize(50);
     setSearchQuery("");
@@ -618,6 +633,7 @@ const UserLogsSection = () => {
   const handleBack = () => {
     setSelectedUserId(null);
     setSelectedUserLabel("");
+    setSelectedUserRegion(null);
     setPage(1);
     setPageSize(50);
   };
@@ -625,6 +641,34 @@ const UserLogsSection = () => {
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setPage(1);
+  };
+
+  const handleExportCsv = async () => {
+    if (!selectedUserId || !qsosData || qsosData.total_qsos === 0) return;
+    setExporting(true);
+    try {
+      const token = await getToken();
+      // Fetch every QSO in one request (not just the current page) so the
+      // export always contains the user's full log.
+      const response = await apiClient.get(
+        `/admin/users/${selectedUserId}/qsos?page=1&page_size=${qsosData.total_qsos}`,
+        { Authorization: `Bearer ${token}` },
+      );
+      const fullData: UserQsosResponse = await response.json();
+      const required = getRequiredAmounts(selectedUserRegion);
+      const csv = buildQsoReportCsv(
+        fullData.callsign || selectedUserLabel,
+        fullData.qsos,
+        required.areas,
+        required.regions,
+      );
+      const safeLabel = selectedUserLabel.replace(/[^a-z0-9]+/gi, "_");
+      downloadCsv(csv, `${safeLabel}_qsos.csv`);
+    } catch {
+      toast.error("Failed to export QSOs");
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (selectedUserId) {
@@ -647,6 +691,21 @@ const UserLogsSection = () => {
               </p>
             </div>
           </div>
+          {!qsosLoading && qsosData && qsosData.total_qsos > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Export CSV
+            </Button>
+          )}
         </div>
 
         {qsosLoading ? (
@@ -722,9 +781,9 @@ const UserLogsSection = () => {
               key={user.clerk_user_id}
               type="button"
               onClick={() => handleSelectUser(user)}
-              className="w-full rounded-lg border border-border bg-background p-3 text-left transition-colors hover:bg-accent/10"
+              className="w-full cursor-pointer rounded-lg border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-accent/20"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   {user.callsign && (
                     <p className="font-semibold uppercase">{user.callsign}</p>
@@ -733,11 +792,17 @@ const UserLogsSection = () => {
                     {user.email || user.username || user.clerk_user_id}
                   </p>
                 </div>
-                {user.region !== null && user.region !== undefined && (
-                  <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                    Region {user.region}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {user.region !== null && user.region !== undefined && (
+                    <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                      {getRegionLabel(user.region)}
+                    </span>
+                  )}
+                  <span className="hidden sm:inline text-xs text-muted-foreground">
+                    View QSO log
                   </span>
-                )}
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
             </button>
           ))}
