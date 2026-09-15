@@ -551,7 +551,11 @@ const Map: React.FC = () => {
             border: "none",
             borderRadius: "8px",
             boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+            // Extra top margin so the "Terrain" checkbox that Google's own
+            // Map/Satellite control expands beneath itself has room, instead
+            // of overlapping this button.
             margin: "10px",
+            marginTop: "26px",
             padding: "0 16px",
             height: "36px",
             fontSize: "14px",
