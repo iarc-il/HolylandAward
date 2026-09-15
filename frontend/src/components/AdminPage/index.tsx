@@ -205,7 +205,14 @@ const AdminPage = () => {
       </section>
 
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Maintenance Mode</h2>
+        <h2 className="text-xl font-semibold mb-1">Maintenance Mode</h2>
+        <p className="text-muted-foreground text-base mb-4">
+          When enabled, every visitor who isn't an admin - signed in or
+          not - sees a maintenance page instead of the app. Admins can
+          keep using the site normally while it's on, which is useful for
+          making changes or fixing issues without regular users running
+          into a broken or half-updated site in the meantime.
+        </p>
         {loading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
