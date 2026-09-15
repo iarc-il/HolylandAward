@@ -523,6 +523,48 @@ const Map: React.FC = () => {
           );
           window.addEventListener("resize", fitGridToHeight);
 
+          // "Zoom All" button - resets to the same full-grid view as the
+          // initial load. Added as a real Maps control so it's positioned
+          // consistently with Google's own UI controls, but styled as a
+          // proper filled command button (matching the app's primary color)
+          // rather than Maps' plain white control look.
+          const zoomAllButton = document.createElement("button");
+          zoomAllButton.textContent = "Zoom All";
+          zoomAllButton.type = "button";
+          zoomAllButton.title = "Reset zoom to show the whole grid";
+          const zoomAllButtonBaseStyle = {
+            backgroundColor: "#3498DB",
+            border: "none",
+            borderRadius: "8px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+            margin: "10px",
+            padding: "0 16px",
+            height: "36px",
+            fontSize: "14px",
+            fontWeight: "600",
+            fontFamily: "Roboto, Arial, sans-serif",
+            cursor: "pointer",
+            color: "#fff",
+            transition: "background-color 0.15s ease, box-shadow 0.15s ease",
+          };
+          Object.assign(zoomAllButton.style, zoomAllButtonBaseStyle);
+          zoomAllButton.addEventListener("mouseenter", () => {
+            zoomAllButton.style.backgroundColor = "#2980B9";
+            zoomAllButton.style.boxShadow = "0 3px 8px rgba(0,0,0,0.35)";
+          });
+          zoomAllButton.addEventListener("mouseleave", () => {
+            zoomAllButton.style.backgroundColor =
+              zoomAllButtonBaseStyle.backgroundColor;
+            zoomAllButton.style.boxShadow = zoomAllButtonBaseStyle.boxShadow;
+          });
+          zoomAllButton.addEventListener("click", fitGridToHeight);
+          // TOP_LEFT stacks controls in a horizontal row (which is why it
+          // landed next to the Map/Satellite toggle); LEFT_TOP stacks
+          // vertically down the left edge, right below that row.
+          mapInstance.controls[
+            (window as any).google.maps.ControlPosition.LEFT_TOP
+          ].push(zoomAllButton);
+
           setMap(mapInstance);
         }
       } catch (error) {
