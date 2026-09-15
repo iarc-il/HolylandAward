@@ -110,12 +110,15 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-12">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 pb-12">
       <div className="space-y-2">
         <h1 className="text-4xl md:text-5xl font-bold text-foreground">
           Admin
         </h1>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="flex flex-col gap-6">
 
       <ConnectedUsersSection />
 
@@ -268,9 +271,16 @@ const AdminPage = () => {
 
       <UserLimitSection />
 
+      </div>
+
+      <div className="flex flex-col gap-6">
+
       <AllUsersSection />
 
       <UserLogsSection />
+
+      </div>
+      </div>
 
       <Dialog
         open={denyDialog.open}
@@ -596,6 +606,8 @@ const UserLogsSection = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [exporting, setExporting] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -608,6 +620,20 @@ const UserLogsSection = () => {
 
   const { data: searchData, isLoading: searchLoading } =
     useAdminUserSearch(debouncedQuery);
+
+  // Browse-all list shown when the search box is empty, so admins don't
+  // have to know/type anything to find a user.
+  const { data: allUsersData, isLoading: allUsersLoading } =
+    useAdminUsersList(1, 100);
+
+  const isBrowsingAll = !debouncedQuery;
+  const displayedUsers = isBrowsingAll
+    ? (allUsersData?.users ?? [])
+    : (searchData?.users ?? []);
+  const displayedTotal = isBrowsingAll
+    ? (allUsersData?.total ?? 0)
+    : (searchData?.total ?? 0);
+  const listLoading = isBrowsingAll ? allUsersLoading : searchLoading;
 
   const { data: qsosData, isLoading: qsosLoading } = useAdminUserQsos(
     selectedUserId,
@@ -628,6 +654,7 @@ const UserLogsSection = () => {
     setPageSize(50);
     setSearchQuery("");
     setDebouncedQuery("");
+    setIsDropdownOpen(false);
   };
 
   const handleBack = () => {
@@ -693,10 +720,10 @@ const UserLogsSection = () => {
           </div>
           {!qsosLoading && qsosData && qsosData.total_qsos > 0 && (
             <Button
-              variant="outline"
               size="sm"
               onClick={handleExportCsv}
               disabled={exporting}
+              className="bg-green-800 font-bold text-white hover:bg-green-900"
             >
               {exporting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -751,63 +778,94 @@ const UserLogsSection = () => {
         logs.
       </p>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
         <Input
-          placeholder="Search users..."
+          placeholder="Search users, or click to browse all..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={() => {
+            clearTimeout(blurTimeoutRef.current);
+            setIsDropdownOpen(true);
+          }}
+          onBlur={() => {
+            // Delay so a click on a dropdown item (which blurs the input
+            // first) still registers before the dropdown disappears.
+            blurTimeoutRef.current = setTimeout(
+              () => setIsDropdownOpen(false),
+              150,
+            );
+          }}
           className="pl-9"
         />
-      </div>
 
-      {searchLoading && (
-        <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Searching...
-        </div>
-      )}
-
-      {!searchLoading && debouncedQuery && searchData?.total === 0 && (
-        <p className="py-4 text-sm text-muted-foreground">
-          No users found matching "{debouncedQuery}".
-        </p>
-      )}
-
-      {!searchLoading && searchData && searchData.total > 0 && (
-        <div className="space-y-2">
-          {searchData.users.map((user) => (
-            <button
-              key={user.clerk_user_id}
-              type="button"
-              onClick={() => handleSelectUser(user)}
-              className="w-full cursor-pointer rounded-lg border border-border bg-background p-3 text-left transition-colors hover:border-primary hover:bg-accent/20"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  {user.callsign && (
-                    <p className="font-semibold uppercase">{user.callsign}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    {user.email || user.username || user.clerk_user_id}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {user.region !== null && user.region !== undefined && (
-                    <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      {getRegionLabel(user.region)}
-                    </span>
-                  )}
-                  <span className="hidden sm:inline text-xs text-muted-foreground">
-                    View QSO log
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
+        {isDropdownOpen && (
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-96 overflow-y-auto rounded-lg border border-border bg-popover p-2 shadow-lg">
+            {listLoading && (
+              <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {isBrowsingAll ? "Loading users..." : "Searching..."}
               </div>
-            </button>
-          ))}
-        </div>
-      )}
+            )}
+
+            {!listLoading && !isBrowsingAll && displayedTotal === 0 && (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                No users found matching "{debouncedQuery}".
+              </p>
+            )}
+
+            {!listLoading && displayedTotal > 0 && (
+              <div className="space-y-1">
+                {isBrowsingAll && (
+                  <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    All users{" "}
+                    {allUsersData && allUsersData.total > displayedUsers.length
+                      ? `(showing ${displayedUsers.length} of ${allUsersData.total} - type to search the rest)`
+                      : ""}
+                  </p>
+                )}
+                {displayedUsers.map((user) => (
+                  <button
+                    key={user.clerk_user_id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      // Fires before the input's onBlur, so selection
+                      // registers before the dropdown closes.
+                      e.preventDefault();
+                      handleSelectUser(user);
+                    }}
+                    className="w-full cursor-pointer rounded-lg border border-transparent p-3 text-left transition-colors hover:border-primary hover:bg-accent/20"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        {user.callsign && (
+                          <p className="font-semibold uppercase">
+                            {user.callsign}
+                          </p>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                          {user.email || user.username || user.clerk_user_id}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {user.region !== null && user.region !== undefined && (
+                          <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                            {getRegionLabel(user.region)}
+                          </span>
+                        )}
+                        <span className="hidden sm:inline text-xs text-muted-foreground">
+                          View QSO log
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 };
