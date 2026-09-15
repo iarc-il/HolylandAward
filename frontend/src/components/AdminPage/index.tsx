@@ -64,7 +64,7 @@ const AdminPage = () => {
       .catch(() => setLoading(false));
   }, []);
 
-  const handleToggle = async () => {
+  const handleSetMaintenance = async (targetValue: boolean) => {
     setToggling(true);
     try {
       const token = await getToken();
@@ -74,10 +74,13 @@ const AdminPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ maintenance_mode: !maintenanceMode }),
+        body: JSON.stringify({ maintenance_mode: targetValue }),
       });
       if (res.ok) {
-        window.location.reload();
+        // Admins always bypass the maintenance gate regardless of this
+        // value, so there's no need to reload the whole page - just
+        // reflect the new state directly.
+        setMaintenanceMode(targetValue);
       }
     } finally {
       setToggling(false);
@@ -216,54 +219,45 @@ const AdminPage = () => {
       </section>
 
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-1">Maintenance Mode</h2>
-        <p className="text-muted-foreground text-base mb-4">
-          When enabled, every visitor who isn't an admin - signed in or
-          not - sees a maintenance page instead of the app. Admins can
-          keep using the site normally while it's on, which is useful for
-          making changes or fixing issues without regular users running
-          into a broken or half-updated site in the meantime.
-        </p>
+        <h2 className="text-xl font-semibold mb-4">Maintenance Mode</h2>
         {loading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Checking status…
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {maintenanceMode ? (
-                <Shield className="h-5 w-5 text-amber-500" />
-              ) : (
-                <ShieldOff className="h-5 w-5 text-muted-foreground" />
-              )}
-              <span className="text-muted-foreground">
-                {maintenanceMode ? (
-                  <>
-                    Maintenance mode is{" "}
-                    <span className="font-semibold text-amber-500">ACTIVE</span>
-                    . Non-admin users cannot access the site.
-                  </>
-                ) : (
-                  <>
-                    Maintenance mode is{" "}
-                    <span className="font-semibold text-green-500">
-                      INACTIVE
-                    </span>
-                    .
-                  </>
-                )}
-              </span>
-            </div>
+          <div className="flex flex-wrap gap-3">
             <Button
-              variant={maintenanceMode ? "destructive" : "default"}
-              onClick={handleToggle}
+              onClick={() => handleSetMaintenance(true)}
               disabled={toggling}
+              className={
+                maintenanceMode
+                  ? "bg-red-600 font-bold text-white hover:bg-red-700"
+                  : "border-2 border-gray-300 bg-white font-bold text-gray-400 hover:bg-gray-50"
+              }
             >
               {toggling ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              {maintenanceMode ? "Disable" : "Enable"}
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Shield className="h-4 w-4" />
+              )}
+              Maintenance Mode
+            </Button>
+            <Button
+              onClick={() => handleSetMaintenance(false)}
+              disabled={toggling}
+              className={
+                !maintenanceMode
+                  ? "bg-green-600 font-bold text-white hover:bg-green-700"
+                  : "border-2 border-gray-300 bg-white font-bold text-gray-400 hover:bg-gray-50"
+              }
+            >
+              {toggling ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldOff className="h-4 w-4" />
+              )}
+              Site on the Air
             </Button>
           </div>
         )}
