@@ -618,7 +618,7 @@ const UserLogsSection = () => {
   // Browse-all list shown when the search box is empty, so admins don't
   // have to know/type anything to find a user.
   const { data: allUsersData, isLoading: allUsersLoading } =
-    useAdminUsersList(1, 100);
+    useAdminUsersList(1, 500); // 500 is the backend's own max page_size
 
   const isBrowsingAll = !debouncedQuery;
   const displayedUsers = isBrowsingAll
