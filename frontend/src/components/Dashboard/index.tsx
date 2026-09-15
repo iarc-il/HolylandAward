@@ -9,23 +9,8 @@ import Map from "../Map";
 import StatsCard from "./components/StatsCard";
 import { useUserAreasAndRegions } from "../../api/useUserAreasAndRegions";
 import { useProfile } from "../../api/useProfile";
+import { getRequiredAmounts } from "@/lib/regionRequirements";
 import { Trophy, Mail, Sparkles } from "lucide-react";
-
-// Get required areas and regions based on user's region
-const getRequiredAmounts = (region?: number) => {
-  switch (region) {
-    case 0: // Israel
-      return { areas: 150, regions: 18 };
-    case 1: // Region 1
-      return { areas: 100, regions: 13 };
-    case 2: // Region 2
-      return { areas: 50, regions: 13 };
-    case 3: // Region 3
-      return { areas: 50, regions: 13 };
-    default:
-      return { areas: 0, regions: 0 };
-  }
-};
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
