@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { SignIn } from "@clerk/clerk-react";
+import { SignIn, SignUp } from "@clerk/clerk-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import awardCert from "@/assets/award_gold_comp.png";
@@ -7,12 +7,12 @@ import logo from "@/assets/logo.svg";
 import { useRegistrationStatus } from "@/api/useUserLimit";
 
 const WelcomePage = () => {
-  const [showSignIn, setShowSignIn] = useState(false);
+  const [authView, setAuthView] = useState<"signIn" | "signUp" | null>(null);
   const navigate = useNavigate();
   const { data: registrationStatus } = useRegistrationStatus();
   const registrationFull = registrationStatus?.limit_reached ?? false;
   const hideSignUp = registrationStatus ? registrationFull : true;
-  const signInAppearance = {
+  const authAppearance = {
     variables: {
       fontSize: "1.05rem",
       spacingUnit: "1.15rem",
@@ -22,7 +22,7 @@ const WelcomePage = () => {
         fontSize: "1.2rem",
         padding: "1.1rem 1rem",
       },
-      ...(hideSignUp
+      ...(hideSignUp && authView === "signIn"
         ? {
             footerAction: "hidden",
             footerActionLink: "hidden",
@@ -32,12 +32,12 @@ const WelcomePage = () => {
     },
   };
 
-  if (showSignIn) {
+  if (authView) {
     return (
       <div className="flex-1 h-screen flex items-center justify-center relative z-10">
         <div
           className={`bg-card p-8 rounded-xl shadow-lg border border-border ${
-            hideSignUp ? "clerk-hide-sign-up" : ""
+            hideSignUp && authView === "signIn" ? "clerk-hide-sign-up" : ""
           }`}
         >
           {registrationFull && (
@@ -45,7 +45,11 @@ const WelcomePage = () => {
               Registration is currently full. Existing users can still sign in.
             </div>
           )}
-          <SignIn appearance={signInAppearance} />
+          {authView === "signIn" ? (
+            <SignIn appearance={authAppearance} />
+          ) : (
+            <SignUp appearance={authAppearance} />
+          )}
         </div>
       </div>
     );
@@ -129,10 +133,18 @@ const WelcomePage = () => {
           </Button>
           <Button
             variant="outline"
-            onClick={() => setShowSignIn(true)}
+            onClick={() => setAuthView("signIn")}
             className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-0 ring-2 ring-border hover:ring-primary">
             Sign In
           </Button>
+          {!hideSignUp && (
+            <Button
+              variant="outline"
+              onClick={() => setAuthView("signUp")}
+              className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-0 ring-2 ring-border hover:ring-primary">
+              Sign Up
+            </Button>
+          )}
         </div>
       </div>
 
