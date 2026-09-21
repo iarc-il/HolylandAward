@@ -9,23 +9,8 @@ import Map from "../Map";
 import StatsCard from "./components/StatsCard";
 import { useUserAreasAndRegions } from "../../api/useUserAreasAndRegions";
 import { useProfile } from "../../api/useProfile";
+import { getRequiredAmounts } from "@/lib/regionRequirements";
 import { Trophy, Mail, Sparkles } from "lucide-react";
-
-// Get required areas and regions based on user's region
-const getRequiredAmounts = (region?: number) => {
-  switch (region) {
-    case 0: // Israel
-      return { areas: 150, regions: 18 };
-    case 1: // Region 1
-      return { areas: 100, regions: 13 };
-    case 2: // Region 2
-      return { areas: 50, regions: 13 };
-    case 3: // Region 3
-      return { areas: 50, regions: 13 };
-    default:
-      return { areas: 0, regions: 0 };
-  }
-};
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -131,20 +116,24 @@ const Dashboard = () => {
     );
   }
 
+  // Each of the three regions below (title, stat cards, map) is positioned
+  // independently via its own top/left/right/bottom values on this relative
+  // container, rather than through flexbox/gap flow - so moving or resizing
+  // one never shifts the others. Adjust each block's own inset values to
+  // reposition just that block.
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-          Dashboard
-        </h1>
+    <div className="relative w-full h-full flex-1 min-h-0">
+      {/* 1. Dashboard title - independent position */}
+      <div className="absolute top-0 left-0">
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-base">
-          Welcome to the HolyLand Award management system.
+          HolyLand Award management system
         </p>
       </div>
 
-      {/* Achievement Banner - Show when all requirements met */}
+      {/* Achievement Banner - independent position, only visible when shown */}
       {allRequirementsMet && !areasLoading && (
-        <div className="relative overflow-hidden rounded-xl border-2 border-green-500 bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 p-6 shadow-lg animate-in fade-in slide-in-from-top duration-700">
+        <div className="absolute top-20 left-0 right-0 overflow-hidden rounded-xl border-2 border-green-500 bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 p-6 shadow-lg animate-in fade-in slide-in-from-top duration-700">
           <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-200/30 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-200/30 rounded-full blur-3xl" />
           <div className="relative flex items-start gap-4">
@@ -180,64 +169,59 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Main Content Layout */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left Side - Statistics Cards */}
-        <div className="flex-shrink-0 lg:w-80">
-          <div className="space-y-4">
-            <StatsCard
-              title="Squares"
-              current={userAreasData?.total_areas ?? 0}
-              total={requiredAmounts.areas}
-              isLoading={areasLoading}
-              isError={!!areasError}
-              onClick={() => setAreasDialogOpen(true)}
-            />
+      {/* 2. Statistics Cards (Squares / Regions / Callsign) - independent position */}
+      <div className="absolute top-20 left-0 w-80 space-y-4">
+        <StatsCard
+          title="Squares"
+          current={userAreasData?.total_areas ?? 0}
+          total={requiredAmounts.areas}
+          isLoading={areasLoading}
+          isError={!!areasError}
+          onClick={() => setAreasDialogOpen(true)}
+        />
 
-            <StatsCard
-              title="Regions"
-              current={userAreasData?.total_regions ?? 0}
-              total={requiredAmounts.regions}
-              isLoading={areasLoading}
-              isError={!!areasError}
-              onClick={() => setRegionsDialogOpen(true)}
-            />
+        <StatsCard
+          title="Regions"
+          current={userAreasData?.total_regions ?? 0}
+          total={requiredAmounts.regions}
+          isLoading={areasLoading}
+          isError={!!areasError}
+          onClick={() => setRegionsDialogOpen(true)}
+        />
 
-            <div className="p-6 bg-card border border-border rounded-xl shadow-md">
-              <h3 className="font-semibold mb-3 text-lg">Callsign</h3>
-              <p className="text-2xl font-bold text-primary">
-                {areasLoading
-                  ? "..."
-                  : areasError
-                    ? "N/A"
-                    : (userAreasData?.callsign ?? "Not Set")}
+        <div className="p-6 bg-card border border-border rounded-xl shadow-md">
+          <h3 className="font-semibold mb-3 text-lg">Callsign</h3>
+          <p className="text-2xl font-bold text-primary">
+            {areasLoading
+              ? "..."
+              : areasError
+                ? "N/A"
+                : (userAreasData?.callsign ?? "Not Set")}
+          </p>
+          {countedCallsigns.length > 1 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-muted-foreground">
+                Counting QSOs from
               </p>
-              {countedCallsigns.length > 1 && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Counting QSOs from
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {countedCallsigns.map((callsign) => (
-                      <span
-                        key={callsign}
-                        className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground"
-                      >
-                        {callsign}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {countedCallsigns.map((callsign) => (
+                  <span
+                    key={callsign}
+                    className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground"
+                  >
+                    {callsign}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
+      </div>
 
-        {/* Right Side - Map Section */}
-        <div className="flex-1">
-          <div className="border border-border rounded-xl overflow-hidden shadow-md h-[600px] lg:h-[800px]">
-            <Map />
-          </div>
+      {/* 3. Map - independent position */}
+      <div className="absolute top-0 left-[344px] right-0 bottom-0">
+        <div className="border border-border rounded-xl overflow-hidden shadow-md w-full h-full">
+          <Map />
         </div>
       </div>
 

@@ -11,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getApiBaseUrl } from "@/lib/api";
+import { getApiBaseUrl, apiClient } from "@/lib/api";
+import { buildQsoReportCsv, downloadCsv } from "@/lib/csv";
+import { getRequiredAmounts } from "@/lib/regionRequirements";
 import {
   usePendingCallsignRequests,
   useApproveCallsignRequest,
@@ -19,15 +21,21 @@ import {
 } from "@/api/useCallsignRequests";
 import { useAdminUserSearch } from "@/api/useAdminUserSearch";
 import { useAdminUserQsos } from "@/api/useAdminUserQsos";
+import type { UserQsosResponse } from "@/api/useUserQsos";
 import { useAdminUsersList } from "@/api/useAdminUsersList";
 import { useConnectedUsers } from "@/api/useConnectedUsers";
 import { useAdminUserLimit, useUpdateUserLimit } from "@/api/useUserLimit";
 import QsoTable from "@/components/QsoTable";
 import QsoStatsCard from "@/components/QsoStatsCard";
 import PaginationControls from "@/components/PaginationControls";
-import { Activity, Shield, ShieldOff, Loader2, ArrowLeft, Search, Users } from "lucide-react";
+import { Activity, Shield, ShieldOff, Loader2, ArrowLeft, Search, Users, ChevronRight, Download } from "lucide-react";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 500];
+
+// Region 0 is Israel; the rest don't have more specific names in the app
+// yet, so they just stay "Region N".
+const REGION_NAMES: Record<number, string> = { 0: "Israel" };
+const getRegionLabel = (region: number) => REGION_NAMES[region] ?? `Region ${region}`;
 
 const AdminPage = () => {
   const { getToken } = useAuth();
@@ -56,7 +64,7 @@ const AdminPage = () => {
       .catch(() => setLoading(false));
   }, []);
 
-  const handleToggle = async () => {
+  const handleSetMaintenance = async (targetValue: boolean) => {
     setToggling(true);
     try {
       const token = await getToken();
@@ -66,10 +74,13 @@ const AdminPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ maintenance_mode: !maintenanceMode }),
+        body: JSON.stringify({ maintenance_mode: targetValue }),
       });
       if (res.ok) {
-        window.location.reload();
+        // Admins always bypass the maintenance gate regardless of this
+        // value, so there's no need to reload the whole page - just
+        // reflect the new state directly.
+        setMaintenanceMode(targetValue);
       }
     } finally {
       setToggling(false);
@@ -102,12 +113,15 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-12">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 pb-12">
       <div className="space-y-2">
         <h1 className="text-4xl md:text-5xl font-bold text-foreground">
           Admin
         </h1>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="flex flex-col gap-6">
 
       <ConnectedUsersSection />
 
@@ -212,40 +226,38 @@ const AdminPage = () => {
             Checking status…
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {maintenanceMode ? (
-                <Shield className="h-5 w-5 text-amber-500" />
-              ) : (
-                <ShieldOff className="h-5 w-5 text-muted-foreground" />
-              )}
-              <span className="text-muted-foreground">
-                {maintenanceMode ? (
-                  <>
-                    Maintenance mode is{" "}
-                    <span className="font-semibold text-amber-500">ACTIVE</span>
-                    . Non-admin users cannot access the site.
-                  </>
-                ) : (
-                  <>
-                    Maintenance mode is{" "}
-                    <span className="font-semibold text-green-500">
-                      INACTIVE
-                    </span>
-                    .
-                  </>
-                )}
-              </span>
-            </div>
+          <div className="flex flex-wrap gap-3">
             <Button
-              variant={maintenanceMode ? "destructive" : "default"}
-              onClick={handleToggle}
+              onClick={() => handleSetMaintenance(true)}
               disabled={toggling}
+              className={
+                maintenanceMode
+                  ? "bg-red-600 font-bold text-white hover:bg-red-700"
+                  : "border-2 border-gray-300 bg-white font-bold text-gray-400 hover:bg-gray-50"
+              }
             >
               {toggling ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              {maintenanceMode ? "Disable" : "Enable"}
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Shield className="h-4 w-4" />
+              )}
+              Maintenance Mode
+            </Button>
+            <Button
+              onClick={() => handleSetMaintenance(false)}
+              disabled={toggling}
+              className={
+                !maintenanceMode
+                  ? "bg-green-600 font-bold text-white hover:bg-green-700"
+                  : "border-2 border-gray-300 bg-white font-bold text-gray-400 hover:bg-gray-50"
+              }
+            >
+              {toggling ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldOff className="h-4 w-4" />
+              )}
+              Site on the Air
             </Button>
           </div>
         )}
@@ -253,9 +265,16 @@ const AdminPage = () => {
 
       <UserLimitSection />
 
+      </div>
+
+      <div className="flex flex-col gap-6">
+
       <AllUsersSection />
 
       <UserLogsSection />
+
+      </div>
+      </div>
 
       <Dialog
         open={denyDialog.open}
@@ -543,7 +562,7 @@ const AllUsersSection = () => {
                   </div>
                   {user.region !== null && user.region !== undefined && (
                     <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      Region {user.region}
+                      {getRegionLabel(user.region)}
                     </span>
                   )}
                 </div>
@@ -570,12 +589,19 @@ const AllUsersSection = () => {
 };
 
 const UserLogsSection = () => {
+  const { getToken } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserLabel, setSelectedUserLabel] = useState("");
+  const [selectedUserRegion, setSelectedUserRegion] = useState<
+    number | null
+  >(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [exporting, setExporting] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -589,6 +615,20 @@ const UserLogsSection = () => {
   const { data: searchData, isLoading: searchLoading } =
     useAdminUserSearch(debouncedQuery);
 
+  // Browse-all list shown when the search box is empty, so admins don't
+  // have to know/type anything to find a user.
+  const { data: allUsersData, isLoading: allUsersLoading } =
+    useAdminUsersList(1, 500); // 500 is the backend's own max page_size
+
+  const isBrowsingAll = !debouncedQuery;
+  const displayedUsers = isBrowsingAll
+    ? (allUsersData?.users ?? [])
+    : (searchData?.users ?? []);
+  const displayedTotal = isBrowsingAll
+    ? (allUsersData?.total ?? 0)
+    : (searchData?.total ?? 0);
+  const listLoading = isBrowsingAll ? allUsersLoading : searchLoading;
+
   const { data: qsosData, isLoading: qsosLoading } = useAdminUserQsos(
     selectedUserId,
     page,
@@ -599,18 +639,22 @@ const UserLogsSection = () => {
     clerk_user_id: string;
     callsign: string | null;
     email: string | null;
+    region: number | null;
   }) => {
     setSelectedUserId(user.clerk_user_id);
     setSelectedUserLabel(user.callsign || user.email || user.clerk_user_id);
+    setSelectedUserRegion(user.region);
     setPage(1);
     setPageSize(50);
     setSearchQuery("");
     setDebouncedQuery("");
+    setIsDropdownOpen(false);
   };
 
   const handleBack = () => {
     setSelectedUserId(null);
     setSelectedUserLabel("");
+    setSelectedUserRegion(null);
     setPage(1);
     setPageSize(50);
   };
@@ -618,6 +662,34 @@ const UserLogsSection = () => {
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setPage(1);
+  };
+
+  const handleExportCsv = async () => {
+    if (!selectedUserId || !qsosData || qsosData.total_qsos === 0) return;
+    setExporting(true);
+    try {
+      const token = await getToken();
+      // Fetch every QSO in one request (not just the current page) so the
+      // export always contains the user's full log.
+      const response = await apiClient.get(
+        `/admin/users/${selectedUserId}/qsos?page=1&page_size=${qsosData.total_qsos}`,
+        { Authorization: `Bearer ${token}` },
+      );
+      const fullData: UserQsosResponse = await response.json();
+      const required = getRequiredAmounts(selectedUserRegion);
+      const csv = buildQsoReportCsv(
+        fullData.callsign || selectedUserLabel,
+        fullData.qsos,
+        required.areas,
+        required.regions,
+      );
+      const safeLabel = selectedUserLabel.replace(/[^a-z0-9]+/gi, "_");
+      downloadCsv(csv, `${safeLabel}_qsos.csv`);
+    } catch {
+      toast.error("Failed to export QSOs");
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (selectedUserId) {
@@ -640,6 +712,21 @@ const UserLogsSection = () => {
               </p>
             </div>
           </div>
+          {!qsosLoading && qsosData && qsosData.total_qsos > 0 && (
+            <Button
+              size="sm"
+              onClick={handleExportCsv}
+              disabled={exporting}
+              className="bg-green-800 font-bold text-white hover:bg-green-900"
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Export CSV
+            </Button>
+          )}
         </div>
 
         {qsosLoading ? (
@@ -685,57 +772,94 @@ const UserLogsSection = () => {
         logs.
       </p>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
         <Input
-          placeholder="Search users..."
+          placeholder="Search users, or click to browse all..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={() => {
+            clearTimeout(blurTimeoutRef.current);
+            setIsDropdownOpen(true);
+          }}
+          onBlur={() => {
+            // Delay so a click on a dropdown item (which blurs the input
+            // first) still registers before the dropdown disappears.
+            blurTimeoutRef.current = setTimeout(
+              () => setIsDropdownOpen(false),
+              150,
+            );
+          }}
           className="pl-9"
         />
-      </div>
 
-      {searchLoading && (
-        <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Searching...
-        </div>
-      )}
-
-      {!searchLoading && debouncedQuery && searchData?.total === 0 && (
-        <p className="py-4 text-sm text-muted-foreground">
-          No users found matching "{debouncedQuery}".
-        </p>
-      )}
-
-      {!searchLoading && searchData && searchData.total > 0 && (
-        <div className="space-y-2">
-          {searchData.users.map((user) => (
-            <button
-              key={user.clerk_user_id}
-              type="button"
-              onClick={() => handleSelectUser(user)}
-              className="w-full rounded-lg border border-border bg-background p-3 text-left transition-colors hover:bg-accent/10"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  {user.callsign && (
-                    <p className="font-semibold uppercase">{user.callsign}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    {user.email || user.username || user.clerk_user_id}
-                  </p>
-                </div>
-                {user.region !== null && user.region !== undefined && (
-                  <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                    Region {user.region}
-                  </span>
-                )}
+        {isDropdownOpen && (
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-96 overflow-y-auto rounded-lg border border-border bg-popover p-2 shadow-lg">
+            {listLoading && (
+              <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {isBrowsingAll ? "Loading users..." : "Searching..."}
               </div>
-            </button>
-          ))}
-        </div>
-      )}
+            )}
+
+            {!listLoading && !isBrowsingAll && displayedTotal === 0 && (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                No users found matching "{debouncedQuery}".
+              </p>
+            )}
+
+            {!listLoading && displayedTotal > 0 && (
+              <div className="space-y-1">
+                {isBrowsingAll && (
+                  <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    All users{" "}
+                    {allUsersData && allUsersData.total > displayedUsers.length
+                      ? `(showing ${displayedUsers.length} of ${allUsersData.total} - type to search the rest)`
+                      : ""}
+                  </p>
+                )}
+                {displayedUsers.map((user) => (
+                  <button
+                    key={user.clerk_user_id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      // Fires before the input's onBlur, so selection
+                      // registers before the dropdown closes.
+                      e.preventDefault();
+                      handleSelectUser(user);
+                    }}
+                    className="w-full cursor-pointer rounded-lg border border-transparent p-3 text-left transition-colors hover:border-primary hover:bg-accent/20"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        {user.callsign && (
+                          <p className="font-semibold uppercase">
+                            {user.callsign}
+                          </p>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                          {user.email || user.username || user.clerk_user_id}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {user.region !== null && user.region !== undefined && (
+                          <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                            {getRegionLabel(user.region)}
+                          </span>
+                        )}
+                        <span className="hidden sm:inline text-xs text-muted-foreground">
+                          View QSO log
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 };

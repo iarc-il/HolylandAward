@@ -18,6 +18,7 @@ services:
       retries: 5
     networks:
       - holyland_network
+    restart: unless-stopped
 
   # Backend API
   backend:

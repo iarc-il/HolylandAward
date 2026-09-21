@@ -21,6 +21,7 @@ const RulesAcceptance: React.FC<RulesAcceptanceProps> = ({
       <div className="flex items-start space-x-3">
         <Checkbox
           id="acceptedRules"
+          className="border-black"
           {...register("acceptedRules")}
           onCheckedChange={(checked) => onCheckedChange(checked === true)}
         />

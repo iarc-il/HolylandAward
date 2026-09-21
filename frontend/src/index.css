@@ -42,6 +42,12 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+
+  /* No text anywhere in the app should render below 16px */
+  --text-xs: 1rem;
+  --text-xs--line-height: calc(1.5 / 1);
+  --text-sm: 1rem;
+  --text-sm--line-height: calc(1.5 / 1);
 }
 
 :root {
@@ -188,15 +194,10 @@
   }
   
   small, .text-small {
-    font-size: 0.875rem; /* 14px */
+    font-size: 1rem; /* 16px - nothing smaller than this anywhere */
     line-height: 1.5;
   }
-  
-  .text-xs {
-    font-size: 0.75rem; /* 12px */
-    line-height: 1.4;
-  }
-  
+
   /* Card styles with light shadow */
   .card-shadow {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -245,13 +246,15 @@
   padding: 2rem 0; /* 32px section spacing */
 }
 
-@media (min-width: 768px) {
-  h1 {
-    font-size: 3.75rem; /* 60px on larger screens */
-  }
-  
-  .spacing-section {
-    padding: 3rem 0; /* 48px section spacing on larger screens */
+@layer base {
+  @media (min-width: 768px) {
+    h1 {
+      font-size: 3.75rem; /* 60px on larger screens */
+    }
+
+    .spacing-section {
+      padding: 3rem 0; /* 48px section spacing on larger screens */
+    }
   }
 }
 

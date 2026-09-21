@@ -13,6 +13,8 @@ declare global {
   }
 }
 
+const MAP_TYPE_STORAGE_KEY = "holyland-map-type";
+
 // TextOverlay class factory - creates the class after Google Maps is loaded
 const createTextOverlayClass = () => {
   return class TextOverlay extends (window as any).google.maps.OverlayView {
@@ -478,14 +480,109 @@ const Map: React.FC = () => {
         setTextOverlay(() => TextOverlayClass);
 
         if (mapRef.current) {
+          const savedMapTypeId =
+            localStorage.getItem(MAP_TYPE_STORAGE_KEY) ||
+            (window as any).google.maps.MapTypeId.ROADMAP;
+
           const mapInstance = new (window as any).google.maps.Map(
             mapRef.current,
             {
               center: { lat: 31.5, lng: 35.0 }, // Center of Israel
               zoom: 8,
-              mapTypeId: (window as any).google.maps.MapTypeId.ROADMAP,
+              mapTypeId: savedMapTypeId,
+              // Standard fitBounds() only supports integer zoom levels, which
+              // (given the grid is much taller than it is wide, and the
+              // container is much wider than it is tall) leaves large empty
+              // margins - the grid only fills ~70% of the container's height
+              // no matter how it's called. Fractional zoom lets us compute
+              // and apply the exact zoom where the grid's height matches the
+              // container's height precisely, with no wasted margin.
+              isFractionalZoomEnabled: true,
             },
           );
+
+          // Remember Map/Satellite choice across sessions.
+          mapInstance.addListener("maptypeid_changed", () => {
+            localStorage.setItem(
+              MAP_TYPE_STORAGE_KEY,
+              mapInstance.getMapTypeId(),
+            );
+          });
+
+          // Web Mercator Y projection (normalized 0-1, north to south).
+          const mercatorY = (lat: number) => {
+            const rad = (lat * Math.PI) / 180;
+            return (
+              0.5 - Math.log(Math.tan(Math.PI / 4 + rad / 2)) / (2 * Math.PI)
+            );
+          };
+
+          const fitGridToHeight = () => {
+            if (!mapRef.current) return;
+            const containerHeightPx = mapRef.current.clientHeight;
+            if (!containerHeightPx) return;
+            const latFraction = mercatorY(southLat) - mercatorY(northLat);
+            const zoom = Math.log2(containerHeightPx / (latFraction * 256));
+            mapInstance.setCenter({
+              lat: (northLat + southLat) / 2,
+              lng: (westLng + eastLng) / 2,
+            });
+            mapInstance.setZoom(zoom);
+          };
+
+          (window as any).google.maps.event.addListenerOnce(
+            mapInstance,
+            "idle",
+            fitGridToHeight,
+          );
+          window.addEventListener("resize", fitGridToHeight);
+
+          // "Zoom All" button - resets to the same full-grid view as the
+          // initial load. Added as a real Maps control so it's positioned
+          // consistently with Google's own UI controls, but styled as a
+          // proper filled command button (matching the app's primary color)
+          // rather than Maps' plain white control look.
+          const zoomAllButton = document.createElement("button");
+          zoomAllButton.textContent = "Zoom All";
+          zoomAllButton.type = "button";
+          zoomAllButton.title = "Reset zoom to show the whole grid";
+          const zoomAllButtonBaseStyle = {
+            backgroundColor: "#3498DB",
+            border: "none",
+            borderRadius: "8px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+            // Extra top margin so the "Terrain" checkbox that Google's own
+            // Map/Satellite control expands beneath itself has room, instead
+            // of overlapping this button.
+            margin: "10px",
+            marginTop: "26px",
+            padding: "0 16px",
+            height: "36px",
+            fontSize: "14px",
+            fontWeight: "600",
+            fontFamily: "Roboto, Arial, sans-serif",
+            cursor: "pointer",
+            color: "#fff",
+            transition: "background-color 0.15s ease, box-shadow 0.15s ease",
+          };
+          Object.assign(zoomAllButton.style, zoomAllButtonBaseStyle);
+          zoomAllButton.addEventListener("mouseenter", () => {
+            zoomAllButton.style.backgroundColor = "#2980B9";
+            zoomAllButton.style.boxShadow = "0 3px 8px rgba(0,0,0,0.35)";
+          });
+          zoomAllButton.addEventListener("mouseleave", () => {
+            zoomAllButton.style.backgroundColor =
+              zoomAllButtonBaseStyle.backgroundColor;
+            zoomAllButton.style.boxShadow = zoomAllButtonBaseStyle.boxShadow;
+          });
+          zoomAllButton.addEventListener("click", fitGridToHeight);
+          // TOP_LEFT stacks controls in a horizontal row (which is why it
+          // landed next to the Map/Satellite toggle); LEFT_TOP stacks
+          // vertically down the left edge, right below that row.
+          mapInstance.controls[
+            (window as any).google.maps.ControlPosition.LEFT_TOP
+          ].push(zoomAllButton);
+
           setMap(mapInstance);
         }
       } catch (error) {
