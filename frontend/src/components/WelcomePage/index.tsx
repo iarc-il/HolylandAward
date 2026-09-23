@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { SignIn, SignUp } from "@clerk/clerk-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import awardCert from "@/assets/award_gold_comp.png";
+import awardCert from "@/assets/award_gold_wood.webp";
 import logo from "@/assets/logo.svg";
 import { useRegistrationStatus } from "@/api/useUserLimit";
 
@@ -105,7 +105,7 @@ const WelcomePage = () => {
         {/* Info card - left gutter. self-start so its top lines up with the
             certificate image's top edge instead of being vertically
             centered against the (taller) image. */}
-        <div className="flex-1 flex flex-col gap-2 text-left min-w-0 self-start">
+        <div className="flex-1 flex flex-col gap-2 text-left min-w-0 self-start mt-6">
           <div>
             <h3 className="font-semibold text-xl md:text-2xl">
               Track Progress
@@ -138,15 +138,15 @@ const WelcomePage = () => {
           </Button>
         </div>
 
-        {/* Certificate image - untouched, nothing overlaid on it */}
+        {/* Certificate image - mounted on a wood plaque backdrop, rendered
+            with a real transparent background (not a flat color + blend
+            mode) since the page backdrop is a dimmed photo, not a solid
+            color a blend-mode trick could match. Its own wall-mount shadow
+            is baked in, so no extra CSS drop-shadow is layered on top. */}
         <img
           src={awardCert}
-          alt="Holyland Award Certificate"
-          className="h-full w-auto flex-shrink-0 animate-float"
-          style={{
-            mixBlendMode: 'darken',
-            filter: 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15))'
-          }}
+          alt="Holyland Award Certificate, mounted on a wood plaque"
+          className="h-full w-auto flex-shrink-0 animate-float mt-6"
         />
 
         {/* Right gutter spacer - keeps the certificate image centered */}
