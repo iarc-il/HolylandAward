@@ -57,8 +57,10 @@ const WelcomePage = () => {
 
   return (
     <div className="flex-1 h-screen flex flex-col items-center overflow-y-auto relative z-10">
-      {/* Sign In / Sign Up - pinned to the top-right corner of the window, navbar-style */}
-      <div className="absolute top-6 right-16 flex items-center gap-3 z-20">
+      {/* Sign In / Sign Up / About & Rules - pinned to the top-right corner
+          of the window, navbar-style. About & Rules sits right at the
+          corner; Sign In/Sign Up sit to its left, with room to breathe. */}
+      <div className="absolute top-6 right-14 flex items-center gap-3 z-20">
         <Button
           variant="outline"
           onClick={() => setAuthView("signIn")}
@@ -73,13 +75,31 @@ const WelcomePage = () => {
             Sign Up
           </Button>
         )}
+        <Button
+          onClick={() => navigate('/rules')}
+          className="px-4 h-11 py-0 text-base border-2 border-transparent">
+          About & Rules
+        </Button>
       </div>
 
-      <div className="max-w-4xl w-full mx-auto px-6 text-center flex-shrink-0 pt-6">
-        {/* Logo + Header - side by side (leveled), not stacked, so this whole block is shorter */}
-        <div className="flex items-center justify-center gap-8">
-          <img src={logo} alt="Holyland Award Logo" className="h-24 w-auto flex-shrink-0" />
-          <div className="text-left">
+      <div className="max-w-4xl w-full mx-auto px-6 text-center flex-shrink-0 pt-6 relative">
+        {/* Logo + Header - logos are absolutely positioned to either side of
+            the title block (symmetric) instead of sitting in-flow beside
+            it, so they don't shift the title/subtitle off-center - it stays
+            centered to the page (matching the image's own centering). */}
+        <div className="relative inline-flex items-center justify-center">
+          <img
+            src={logo}
+            alt="Holyland Award Logo"
+            className="absolute right-full mr-8 h-24 w-auto flex-shrink-0"
+          />
+          <img
+            src={logo}
+            alt=""
+            aria-hidden="true"
+            className="absolute left-full ml-8 h-24 w-auto flex-shrink-0"
+          />
+          <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white">
               Holyland Award
             </h1>
@@ -90,54 +110,16 @@ const WelcomePage = () => {
         </div>
       </div>
 
-      {/* Three-column row: info card in the left gutter, image in the middle (untouched,
-          nothing on it), CTA buttons in the right gutter. The image is sized by height
-          (h-full w-auto) and doesn't grow/shrink (flex-shrink-0); the info card and button
-          column absorb whatever empty space is left on either side instead of that space
-          going to waste.
-          Height is pinned to calc(100vh - 184px) - the space the header block took up
-          BEFORE the logo moved inline - rather than flex-1, so shortening the header just
-          moves the image up instead of growing it. */}
-      <div
-        className="w-full flex items-center justify-center gap-4 md:gap-8 px-6 mt-2 flex-shrink-0"
-        style={{ height: 'calc(100vh - 184px)' }}
-      >
-        {/* Info card - left gutter. self-start so its top lines up with the
-            certificate image's top edge instead of being vertically
-            centered against the (taller) image. */}
-        <div className="flex-1 flex flex-col gap-2 text-left min-w-0 self-start mt-6">
-          <div>
-            <h3 className="font-semibold text-xl md:text-2xl">
-              Track Progress
-            </h3>
-            <p className="text-base md:text-lg text-muted-foreground">
-              Monitor your QSO contacts across different regions and squares
-            </p>
-          </div>
-          <div>
-            <h3 className="font-semibold text-xl md:text-2xl">
-              Visualize Achievement
-            </h3>
-            <p className="text-base md:text-lg text-muted-foreground">
-              See your covered squares on an interactive map
-            </p>
-          </div>
-          <div>
-            <h3 className="font-semibold text-xl md:text-2xl">
-              Claim Certificate
-            </h3>
-            <p className="text-base md:text-lg text-muted-foreground">
-              Completed your region's requirements? Claim your Holyland
-              Award certificate!
-            </p>
-          </div>
-          <Button
-            onClick={() => navigate('/rules')}
-            className="mt-2 px-6 md:px-8 h-14 py-0 text-base md:text-lg border-2 border-transparent self-start">
-            About & Rules
-          </Button>
-        </div>
-
+      {/* Image + badges stacked in one column, sized to fit the image's own
+          rendered width (w-fit, centered via mx-auto) rather than the full
+          page width - so the badges row below, using w-full + justify-between,
+          spans exactly from the image's left edge to its right edge. The
+          image has an explicit height (not flex-grow) so its top edge stays
+          put right below the header and growing it pushes the badges down
+          in normal flow, rather than trying to exactly fill leftover flex
+          space (which had edge-case bugs with invisible letterboxing and
+          overlap at different viewport shapes). */}
+      <div className="w-fit mx-auto flex flex-col items-center gap-1 px-6 mt-1">
         {/* Certificate image - mounted on a wood plaque backdrop, rendered
             with a real transparent background (not a flat color + blend
             mode) since the page backdrop is a dimmed photo, not a solid
@@ -146,11 +128,20 @@ const WelcomePage = () => {
         <img
           src={awardCert}
           alt="Holyland Award Certificate, mounted on a wood plaque"
-          className="h-full w-auto flex-shrink-0 animate-float mt-6"
+          className="h-[80vh] w-auto max-w-full object-contain flex-shrink-0 animate-float"
         />
 
-        {/* Right gutter spacer - keeps the certificate image centered */}
-        <div className="flex-1 min-w-0" />
+        <div className="w-full flex-shrink-0 flex items-center justify-between gap-3 px-8 pb-1">
+          <h3 className="font-semibold text-xl md:text-2xl bg-white rounded-lg px-4 py-1 w-fit shadow-sm">
+            Track Progress
+          </h3>
+          <h3 className="font-semibold text-xl md:text-2xl bg-white rounded-lg px-4 py-1 w-fit shadow-sm">
+            Visualize Achievement
+          </h3>
+          <h3 className="font-semibold text-xl md:text-2xl bg-white rounded-lg px-4 py-1 w-fit shadow-sm">
+            Claim Certificate
+          </h3>
+        </div>
       </div>
 
       {registrationFull && registrationStatus?.user_limit !== null && (
