@@ -22,22 +22,39 @@ class AdifService:
             qso_dict[field.strip().upper()] = value.strip()
         return qso_dict
 
+    # Fields that hold callsigns rather than exchange/location data - never
+    # scanned for grid squares, since a callsign should never be credited as
+    # an area even if it happens to collide with the square format.
+    _CALLSIGN_FIELDS = {"CALL", "STATION_CALLSIGN", "OPERATOR", "OWNER_CALLSIGN"}
+
+    # RST_SENT is, by ADIF definition, the report WE sent - not what we
+    # received from the DX station. Contest software that folds the sent
+    # exchange into this field (e.g. N1MM sending "F12HS" as the Holyland
+    # station's own square to every contact) fills it with a constant value
+    # per log, which would otherwise be mis-credited as a "worked" square on
+    # every single QSO. This is a general ADIF naming convention (any field
+    # describing our own station rather than the contact), not a
+    # software-specific quirk, so MY_* fields are excluded the same way.
+    _OWN_STATION_FIELDS = {"RST_SENT"}
+
+    def _is_own_station_field(self, field: str) -> bool:
+        return field in self._CALLSIGN_FIELDS or field in self._OWN_STATION_FIELDS or field.startswith("MY_")
+
     def _get_required_fields(self, qso_dict: dict) -> dict:
-        required_fields = [
-            "QSO_DATE",
-            "FREQ",
-            "STATION_CALLSIGN",
-            "OPERATOR",
-            "CALL",
-            "STX_STRING",
-            "SRX_STRING",
-            "COMMENT",
-        ]
-        return {field: qso_dict.get(field, "") for field in required_fields}
+        # Different logging software (N1MM, DXKeeper, Log4OM, ...) stores the
+        # received exchange/grid square under different, non-standard field
+        # names. Rather than maintaining a whitelist of known field names per
+        # software, keep every field the ADIF record actually contains and
+        # let _get_areas scan all of them by content instead of by name.
+        core_fields = ["QSO_DATE", "FREQ", "STATION_CALLSIGN", "OPERATOR", "CALL"]
+        result = dict(qso_dict)
+        for field in core_fields:
+            result.setdefault(field, "")
+        return result
 
     def _get_areas(self, qso_dict) -> str:
         """
-        Extract the grid square from the QSO dictionary.
+        Extract the grid square(s) from the QSO dictionary.
         """
 
         def get_valid_area(value: str) -> str:
@@ -55,17 +72,16 @@ class AdifService:
             return ""
 
         areas = []
-        possible_areas = {
-            "STX_STRING": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("STX_STRING", "")),
-            "SRX_STRING": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("SRX_STRING", "")),
-            "COMMENT": re.sub(r"[^A-Z0-9 ]", "", qso_dict.get("COMMENT", "")),
-        }
-
-        for possible_area in possible_areas.values():
-            if not possible_area:
+        seen = set()
+        for field, raw_value in qso_dict.items():
+            if self._is_own_station_field(field) or not raw_value:
                 continue
-            valid_area = get_valid_area(possible_area)
-            if valid_area:
+            cleaned_value = re.sub(r"[^A-Z0-9 ]", "", raw_value.upper())
+            if not cleaned_value:
+                continue
+            valid_area = get_valid_area(cleaned_value)
+            if valid_area and valid_area not in seen:
+                seen.add(valid_area)
                 areas.append(valid_area)
 
         return areas
