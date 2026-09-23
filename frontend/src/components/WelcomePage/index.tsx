@@ -58,7 +58,7 @@ const WelcomePage = () => {
   return (
     <div className="flex-1 h-screen flex flex-col items-center overflow-y-auto relative z-10">
       {/* Sign In / Sign Up - pinned to the top-right corner of the window, navbar-style */}
-      <div className="absolute top-6 right-6 flex items-center gap-3 z-20">
+      <div className="absolute top-6 right-16 flex items-center gap-3 z-20">
         <Button
           variant="outline"
           onClick={() => setAuthView("signIn")}

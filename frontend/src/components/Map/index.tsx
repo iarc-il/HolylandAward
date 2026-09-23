@@ -15,23 +15,48 @@ declare global {
 
 const MAP_TYPE_STORAGE_KEY = "holyland-map-type";
 
+// Zoom level at which a label's baseFontSize is shown at 1:1 scale. Used as
+// a fallback for labels with no cellHeightDeg (e.g. district names, which
+// have no single well-defined cell size). Google Maps doubles the pixel
+// scale of the world for each whole zoom level, so scaling font size by the
+// same 2^(zoom - BASE_ZOOM) factor keeps label text visually proportional
+// to the map as the user zooms in/out.
+const BASE_ZOOM = 9;
+const MIN_LABEL_FONT_PX = 6;
+const MAX_LABEL_FONT_PX = 20;
+// For labels with a known grid cell size (the square ID labels), font size
+// is instead derived directly from the cell's actual on-screen pixel height
+// at the current zoom - this fraction of that height is used as the font
+// size, so the label stays visually proportional to its square exactly,
+// rather than relying on a hand-tuned zoom/size correspondence.
+const CELL_FONT_RATIO = 0.2;
+
 // TextOverlay class factory - creates the class after Google Maps is loaded
 const createTextOverlayClass = () => {
   return class TextOverlay extends (window as any).google.maps.OverlayView {
     private position: any; // google.maps.LatLng when maps is loaded
     private text: string;
+    private baseFontSize: number;
+    private cellHeightDeg?: number;
     private div: HTMLDivElement | null = null;
 
-    constructor(position: any, text: string) {
+    constructor(
+      position: any,
+      text: string,
+      baseFontSize = 12,
+      cellHeightDeg?: number,
+    ) {
       super();
       this.position = position;
       this.text = text;
+      this.baseFontSize = baseFontSize;
+      this.cellHeightDeg = cellHeightDeg;
     }
 
     onAdd() {
       this.div = document.createElement("div");
       this.div.style.position = "absolute";
-      this.div.style.fontSize = "12px";
+      this.div.style.fontSize = `${this.baseFontSize}px`;
       this.div.style.fontWeight = "bold";
       this.div.style.color = "red";
       this.div.style.backgroundColor = "white";
@@ -56,6 +81,48 @@ const createTextOverlayClass = () => {
       if (position) {
         this.div.style.left = position.x + "px";
         this.div.style.top = position.y + "px";
+      }
+
+      if (this.cellHeightDeg && position) {
+        // Project the cell's actual top/bottom edges to get its real
+        // on-screen pixel height at the current zoom, and size the font as
+        // a fraction of that - exactly proportional to the square, at any
+        // zoom level, with no hand-tuned zoom/size formula involved.
+        const lat = this.position.lat();
+        const lng = this.position.lng();
+        const topPx = overlayProjection.fromLatLngToDivPixel(
+          new (window as any).google.maps.LatLng(
+            lat + this.cellHeightDeg / 2,
+            lng,
+          ),
+        );
+        const bottomPx = overlayProjection.fromLatLngToDivPixel(
+          new (window as any).google.maps.LatLng(
+            lat - this.cellHeightDeg / 2,
+            lng,
+          ),
+        );
+        if (topPx && bottomPx) {
+          const cellPixelHeight = Math.abs(bottomPx.y - topPx.y);
+          const fontSize = Math.min(
+            MAX_LABEL_FONT_PX,
+            Math.max(MIN_LABEL_FONT_PX, cellPixelHeight * CELL_FONT_RATIO),
+          );
+          this.div.style.fontSize = `${fontSize}px`;
+        }
+        return;
+      }
+
+      const zoom = this.getMap()?.getZoom?.();
+      if (typeof zoom === "number") {
+        const scaledFontSize = Math.min(
+          MAX_LABEL_FONT_PX,
+          Math.max(
+            MIN_LABEL_FONT_PX,
+            this.baseFontSize * Math.pow(2, zoom - BASE_ZOOM),
+          ),
+        );
+        this.div.style.fontSize = `${scaledFontSize}px`;
       }
     }
 
@@ -372,6 +439,8 @@ const Map: React.FC = () => {
         const overlay = new TextOverlay(
           new (window as any).google.maps.LatLng(position.lat, position.lng),
           squareLabel,
+          12,
+          Math.abs(latSquareSize),
         );
 
         // Apply styling similar to original
@@ -381,10 +450,10 @@ const Map: React.FC = () => {
           this.div.style.whiteSpace = "nowrap";
           this.div.style.transform = "translate(-50%, -50%)";
           this.div.style.pointerEvents = "none";
-          this.div.style.color = "#666666";
+          this.div.style.color = "#000000";
           this.div.style.fontWeight = "bold";
-          this.div.style.opacity = "0.4";
-          this.div.style.fontSize = "12px";
+          this.div.style.opacity = "1";
+          this.div.style.fontSize = `${this.baseFontSize}px`;
           this.div.innerText = this.text;
           const panes = this.getPanes();
           if (panes) {
@@ -406,6 +475,7 @@ const Map: React.FC = () => {
             area.center.lng,
           ),
           area.name,
+          16,
         );
 
         // Apply area label styling
@@ -418,7 +488,7 @@ const Map: React.FC = () => {
           this.div.style.color = "#FF0055";
           this.div.style.fontWeight = "bold";
           this.div.style.opacity = "0.4";
-          this.div.style.fontSize = "16px";
+          this.div.style.fontSize = `${this.baseFontSize}px`;
           this.div.innerText = this.text;
           const panes = this.getPanes();
           if (panes) {
