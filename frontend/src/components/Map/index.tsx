@@ -14,6 +14,34 @@ declare global {
 }
 
 const MAP_TYPE_STORAGE_KEY = "holyland-map-type";
+const TOOLTIP_ENABLED_STORAGE_KEY = "holyland-map-tooltip-enabled";
+
+// District abbreviation -> full name, matching the list on the Rules page.
+const DISTRICT_NAMES: Record<string, string> = {
+  AK: "Akko",
+  AS: "Asqelon",
+  AZ: "Azza",
+  BS: "Be'er Sheva",
+  BL: "Bethlehem",
+  HD: "Hadera",
+  HG: "Hagolan",
+  HF: "Haifa",
+  HS: "Hasharon",
+  HB: "Hebron",
+  JN: "Jenin",
+  JS: "Jerusalem",
+  KT: "Kinneret",
+  PT: "Petah Tiqwa",
+  RA: "Ramallah",
+  RM: "Ramla",
+  RH: "Rehovot",
+  SM: "Shekhem",
+  TA: "Tel Aviv",
+  TK: "Tulkarm",
+  YN: "Yarden",
+  YZ: "Yizre'el",
+  ZF: "Zefat",
+};
 
 // Zoom level at which a label's baseFontSize is shown at 1:1 scale. Used as
 // a fallback for labels with no cellHeightDeg (e.g. district names, which
@@ -24,6 +52,11 @@ const MAP_TYPE_STORAGE_KEY = "holyland-map-type";
 const BASE_ZOOM = 9;
 const MIN_LABEL_FONT_PX = 6;
 const MAX_LABEL_FONT_PX = 20;
+// District (2-letter) labels - full doubling per zoom level (growth 1,
+// matching Google's own tile scaling), with a cap high enough to actually
+// reach that doubling instead of being clamped almost immediately.
+const AREA_LABEL_ZOOM_GROWTH = 1;
+const AREA_LABEL_MAX_FONT_PX = 40;
 // For labels with a known grid cell size (the square ID labels), font size
 // is instead derived directly from the cell's actual on-screen pixel height
 // at the current zoom - this fraction of that height is used as the font
@@ -38,6 +71,8 @@ const createTextOverlayClass = () => {
     private text: string;
     private baseFontSize: number;
     private cellHeightDeg?: number;
+    private zoomGrowth: number;
+    private maxFontSize: number;
     private div: HTMLDivElement | null = null;
 
     constructor(
@@ -45,12 +80,16 @@ const createTextOverlayClass = () => {
       text: string,
       baseFontSize = 12,
       cellHeightDeg?: number,
+      zoomGrowth = 1,
+      maxFontSize = MAX_LABEL_FONT_PX,
     ) {
       super();
       this.position = position;
       this.text = text;
       this.baseFontSize = baseFontSize;
       this.cellHeightDeg = cellHeightDeg;
+      this.zoomGrowth = zoomGrowth;
+      this.maxFontSize = maxFontSize;
     }
 
     onAdd() {
@@ -116,10 +155,11 @@ const createTextOverlayClass = () => {
       const zoom = this.getMap()?.getZoom?.();
       if (typeof zoom === "number") {
         const scaledFontSize = Math.min(
-          MAX_LABEL_FONT_PX,
+          this.maxFontSize,
           Math.max(
             MIN_LABEL_FONT_PX,
-            this.baseFontSize * Math.pow(2, zoom - BASE_ZOOM),
+            this.baseFontSize *
+              Math.pow(2, (zoom - BASE_ZOOM) * this.zoomGrowth),
           ),
         );
         this.div.style.fontSize = `${scaledFontSize}px`;
@@ -145,6 +185,11 @@ const Map: React.FC = () => {
   const gridLinesRef = useRef<any[]>([]); // google.maps.Polyline[] when loaded
   const [TextOverlay, setTextOverlay] = useState<any>(null); // TextOverlay class when loaded
   const mapInitialized = useRef(false); // Add a ref to track initialization
+  const areaPolygonsRef = useRef<{ area: Area; polygon: any }[]>([]); // for hover hit-testing
+  const hoverTooltipRef = useRef<HTMLDivElement | null>(null);
+  const tooltipEnabledRef = useRef<boolean>(
+    localStorage.getItem(TOOLTIP_ENABLED_STORAGE_KEY) !== "false",
+  );
 
   const {
     data: { areas: userAreas } = {},
@@ -346,6 +391,11 @@ const Map: React.FC = () => {
           fillColor: "#00FF00",
           fillOpacity: 0.3,
           zIndex: 999,
+          // Otherwise this shape's own mouse events take over hover
+          // handling while the cursor is over it, and the map's own
+          // 'mousemove' (used by the square/district hover tooltip) never
+          // fires there.
+          clickable: false,
         });
 
         intersectionArea.setMap(map);
@@ -385,6 +435,10 @@ const Map: React.FC = () => {
         strokeWeight: 2,
         fillColor: "#FF0000",
         fillOpacity: 0.0,
+        // These district outlines cover almost the entire grid, so without
+        // this the map's own 'mousemove' (used by the hover tooltip) barely
+        // ever fires - each polygon intercepts it first.
+        clickable: false,
       });
 
       polygon.setMap(map);
@@ -404,6 +458,7 @@ const Map: React.FC = () => {
         strokeColor: "#666666",
         strokeOpacity: 0.6,
         strokeWeight: 1,
+        clickable: false,
       });
       flightPath.setMap(map);
       newGridLines.push(flightPath);
@@ -422,6 +477,7 @@ const Map: React.FC = () => {
         strokeColor: "#666666",
         strokeOpacity: 0.6,
         strokeWeight: 1,
+        clickable: false,
       });
       flightPath.setMap(map);
       newGridLines.push(flightPath);
@@ -476,6 +532,9 @@ const Map: React.FC = () => {
           ),
           area.name,
           16,
+          undefined,
+          AREA_LABEL_ZOOM_GROWTH,
+          AREA_LABEL_MAX_FONT_PX,
         );
 
         // Apply area label styling
@@ -485,9 +544,9 @@ const Map: React.FC = () => {
           this.div.style.whiteSpace = "nowrap";
           this.div.style.transform = "translate(-50%, -50%)";
           this.div.style.pointerEvents = "none";
-          this.div.style.color = "#FF0055";
+          this.div.style.color = "#8B0000";
           this.div.style.fontWeight = "bold";
-          this.div.style.opacity = "0.4";
+          this.div.style.opacity = "1";
           this.div.style.fontSize = `${this.baseFontSize}px`;
           this.div.innerText = this.text;
           const panes = this.getPanes();
@@ -621,11 +680,7 @@ const Map: React.FC = () => {
             border: "none",
             borderRadius: "8px",
             boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-            // Extra top margin so the "Terrain" checkbox that Google's own
-            // Map/Satellite control expands beneath itself has room, instead
-            // of overlapping this button.
-            margin: "10px",
-            marginTop: "26px",
+            margin: "0",
             padding: "0 16px",
             height: "36px",
             fontSize: "14px",
@@ -646,12 +701,142 @@ const Map: React.FC = () => {
             zoomAllButton.style.boxShadow = zoomAllButtonBaseStyle.boxShadow;
           });
           zoomAllButton.addEventListener("click", fitGridToHeight);
-          // TOP_LEFT stacks controls in a horizontal row (which is why it
-          // landed next to the Map/Satellite toggle); LEFT_TOP stacks
-          // vertically down the left edge, right below that row.
+
+          // Hover tooltip - shows the full SQUARE (grid code + district
+          // abbreviation, e.g. "H08HF") and district name under the cursor.
+          // District polygons are built once here (not tied to the grid
+          // redraw) purely for point-in-polygon hit-testing - they're never
+          // added to the map themselves.
+          areaPolygonsRef.current = areas.map((area) => ({
+            area,
+            polygon: new (window as any).google.maps.Polygon({
+              paths: area.coords,
+            }),
+          }));
+
+          const tooltip = document.createElement("div");
+          tooltip.style.position = "absolute";
+          tooltip.style.display = "none";
+          tooltip.style.pointerEvents = "none";
+          tooltip.style.zIndex = "1000";
+          tooltip.style.background = "rgba(0, 0, 0, 0.85)";
+          tooltip.style.color = "#fff";
+          tooltip.style.padding = "4px 8px";
+          tooltip.style.borderRadius = "6px";
+          tooltip.style.fontSize = "15px";
+          tooltip.style.fontFamily = "Roboto, Arial, sans-serif";
+          tooltip.style.whiteSpace = "nowrap";
+          tooltip.style.transform = "translate(14px, 14px)";
+          mapRef.current.appendChild(tooltip);
+          hoverTooltipRef.current = tooltip;
+
+          // Toggle control - lets the user turn the hover tooltip on/off,
+          // remembered across sessions the same way the map type is.
+          const tooltipToggleLabel = document.createElement("label");
+          Object.assign(tooltipToggleLabel.style, {
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "#fff",
+            borderRadius: "8px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+            margin: "0",
+            padding: "6px 10px",
+            fontSize: "14px",
+            fontWeight: "600",
+            fontFamily: "Roboto, Arial, sans-serif",
+            color: "#333",
+            cursor: "pointer",
+            userSelect: "none",
+          });
+
+          const tooltipToggleCheckbox = document.createElement("input");
+          tooltipToggleCheckbox.type = "checkbox";
+          tooltipToggleCheckbox.checked = tooltipEnabledRef.current;
+          tooltipToggleCheckbox.style.cursor = "pointer";
+          tooltipToggleCheckbox.addEventListener("change", () => {
+            tooltipEnabledRef.current = tooltipToggleCheckbox.checked;
+            localStorage.setItem(
+              TOOLTIP_ENABLED_STORAGE_KEY,
+              String(tooltipToggleCheckbox.checked),
+            );
+            if (!tooltipToggleCheckbox.checked && hoverTooltipRef.current) {
+              hoverTooltipRef.current.style.display = "none";
+            }
+          });
+
+          tooltipToggleLabel.appendChild(tooltipToggleCheckbox);
+          tooltipToggleLabel.appendChild(
+            document.createTextNode("Square ID tooltip"),
+          );
+
+          // Stack the tooltip toggle and Zoom All button together as one
+          // control, so the gap above the first item (clearing Google's own
+          // Map/Satellite row and its expandable Terrain checkbox) and the
+          // gap between the two items are the same fixed size.
+          const leftControlsStack = document.createElement("div");
+          Object.assign(leftControlsStack.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "26px",
+            margin: "10px",
+            marginTop: "26px",
+          });
+          leftControlsStack.appendChild(tooltipToggleLabel);
+          leftControlsStack.appendChild(zoomAllButton);
           mapInstance.controls[
             (window as any).google.maps.ControlPosition.LEFT_TOP
-          ].push(zoomAllButton);
+          ].push(leftControlsStack);
+
+          mapInstance.addListener("mousemove", (event: any) => {
+            if (!event.latLng || !mapRef.current || !hoverTooltipRef.current)
+              return;
+
+            if (!tooltipEnabledRef.current) {
+              hoverTooltipRef.current.style.display = "none";
+              return;
+            }
+
+            const lat = event.latLng.lat();
+            const lng = event.latLng.lng();
+            const tooltipEl = hoverTooltipRef.current;
+
+            if (lat > northLat || lat < southLat || lng < westLng || lng > eastLng) {
+              tooltipEl.style.display = "none";
+              return;
+            }
+
+            const squareCode = getSquareByLatLng(lat, lng);
+            const match = areaPolygonsRef.current.find(({ polygon }) =>
+              (window as any).google.maps.geometry.poly.containsLocation(
+                event.latLng,
+                polygon,
+              ),
+            );
+
+            if (match) {
+              const districtName = DISTRICT_NAMES[match.area.name] ?? match.area.name;
+              tooltipEl.innerHTML =
+                `<div style="font-weight:700">${squareCode}${match.area.name}</div>` +
+                `<div style="font-size:15px;opacity:1">${districtName}</div>`;
+            } else {
+              tooltipEl.innerHTML = `<div style="font-weight:700">${squareCode}</div>`;
+            }
+
+            const containerRect = mapRef.current.getBoundingClientRect();
+            const domEvent = event.domEvent as MouseEvent | undefined;
+            if (domEvent) {
+              tooltipEl.style.left = `${domEvent.clientX - containerRect.left}px`;
+              tooltipEl.style.top = `${domEvent.clientY - containerRect.top}px`;
+            }
+            tooltipEl.style.display = "block";
+          });
+
+          mapInstance.addListener("mouseout", () => {
+            if (hoverTooltipRef.current) {
+              hoverTooltipRef.current.style.display = "none";
+            }
+          });
 
           setMap(mapInstance);
         }
