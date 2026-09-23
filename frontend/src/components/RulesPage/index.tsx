@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import Map from "@/components/Map";
 
 const RulesPage = () => {
   const [language, setLanguage] = useState<"en" | "he">("en");
@@ -51,6 +52,19 @@ const RulesPage = () => {
             <img src="https://flagcdn.com/w20/il.png" alt="Hebrew" className="w-5 h-auto" />
             <span className="text-xs">HE</span>
           </Button>
+        </div>
+      </div>
+
+      {/* Map of the Holyland grid - mounted once here (not per-language)
+          so the Google Map / JSTS libraries only load a single time. The
+          map's own bounds are fit tightly to Israel (see Map/index.tsx),
+          so it shows just Israel rather than the wider Middle East. */}
+      <div className="p-6 bg-card border border-border rounded-xl shadow-md">
+        <h2 className="text-2xl font-semibold text-foreground mb-4">
+          {language === "en" ? "The Squares Grid" : "רשת הריבועים"}
+        </h2>
+        <div className="border border-border rounded-xl overflow-hidden h-[500px]">
+          <Map />
         </div>
       </div>
 

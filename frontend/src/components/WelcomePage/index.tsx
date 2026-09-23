@@ -57,6 +57,24 @@ const WelcomePage = () => {
 
   return (
     <div className="flex-1 h-screen flex flex-col items-center overflow-y-auto relative z-10">
+      {/* Sign In / Sign Up - pinned to the top-right corner of the window, navbar-style */}
+      <div className="absolute top-6 right-16 flex items-center gap-3 z-20">
+        <Button
+          variant="outline"
+          onClick={() => setAuthView("signIn")}
+          className="px-6 h-11 py-0 text-base border-0 ring-2 ring-border hover:ring-primary">
+          Sign In
+        </Button>
+        {!hideSignUp && (
+          <Button
+            variant="outline"
+            onClick={() => setAuthView("signUp")}
+            className="px-6 h-11 py-0 text-base border-0 ring-2 ring-border hover:ring-primary">
+            Sign Up
+          </Button>
+        )}
+      </div>
+
       <div className="max-w-4xl w-full mx-auto px-6 text-center flex-shrink-0 pt-6">
         {/* Logo + Header - side by side (leveled), not stacked, so this whole block is shorter */}
         <div className="flex items-center justify-center gap-8">
@@ -84,8 +102,10 @@ const WelcomePage = () => {
         className="w-full flex items-center justify-center gap-4 md:gap-8 px-6 mt-2 flex-shrink-0"
         style={{ height: 'calc(100vh - 184px)' }}
       >
-        {/* Info card - left gutter */}
-        <div className="flex-1 flex flex-col gap-2 text-left min-w-0">
+        {/* Info card - left gutter. self-start so its top lines up with the
+            certificate image's top edge instead of being vertically
+            centered against the (taller) image. */}
+        <div className="flex-1 flex flex-col gap-2 text-left min-w-0 self-start">
           <div>
             <h3 className="font-semibold text-xl md:text-2xl">
               Track Progress
@@ -111,6 +131,11 @@ const WelcomePage = () => {
               Award certificate!
             </p>
           </div>
+          <Button
+            onClick={() => navigate('/rules')}
+            className="mt-2 px-6 md:px-8 h-14 py-0 text-base md:text-lg border-2 border-transparent self-start">
+            About & Rules
+          </Button>
         </div>
 
         {/* Certificate image - untouched, nothing overlaid on it */}
@@ -124,28 +149,8 @@ const WelcomePage = () => {
           }}
         />
 
-        {/* CTA Buttons - right gutter */}
-        <div className="flex-1 flex flex-col gap-4 items-start min-w-0">
-          <Button
-            onClick={() => navigate('/rules')}
-            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-2 border-transparent">
-            About & Rules
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setAuthView("signIn")}
-            className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-0 ring-2 ring-border hover:ring-primary">
-            Sign In
-          </Button>
-          {!hideSignUp && (
-            <Button
-              variant="outline"
-              onClick={() => setAuthView("signUp")}
-              className="px-6 md:px-8 h-14 py-0 text-base md:text-lg border-0 ring-2 ring-border hover:ring-primary">
-              Sign Up
-            </Button>
-          )}
-        </div>
+        {/* Right gutter spacer - keeps the certificate image centered */}
+        <div className="flex-1 min-w-0" />
       </div>
 
       {registrationFull && registrationStatus?.user_limit !== null && (
