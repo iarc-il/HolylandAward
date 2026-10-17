@@ -33,10 +33,10 @@ const ContactDialog = ({ isOpen, onClose }: ContactDialogProps) => {
               <div>
                 <h4 className="font-medium text-sm">Email</h4>
                 <a
-                  href="mailto:holyland@iarc.org"
+                  href="mailto:iarc.holyland.award@gmail.com"
                   className="text-sm text-primary hover:underline"
                 >
-                  phazeman@gmail.com
+                  iarc.holyland.award@gmail.com
                 </a>
               </div>
             </div>
