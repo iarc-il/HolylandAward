@@ -147,6 +147,20 @@ def get_pending_callsign_requests(db: Session) -> List[CallsignChangeRequest]:
     )
 
 
+def count_users(db: Session) -> int:
+    return db.query(Users).count()
+
+
+def list_users_paginated(db: Session, page: int, page_size: int) -> List[Users]:
+    return (
+        db.query(Users)
+        .order_by(Users.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+
 def search_users(db: Session, query: str) -> List[Users]:
     pattern = f"%{query}%"
     return (

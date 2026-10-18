@@ -1,287 +1,193 @@
 # HolylandAward
 
-A website to support the Holyland Award program - a ham radio award system for amateur radio operators.
+A website supporting the Holyland Award program — a ham radio award system for amateur
+radio operators. Operators upload their ADIF logs; the app parses them, works out which
+Israeli grid squares ("areas") they contacted, and shows their progress on a map and
+dashboard.
 
-## Table of Contents
+**Stack:** FastAPI + PostgreSQL backend, React 19 + Vite frontend, Clerk for authentication,
+Google Maps for visualization.
 
-- [Prerequisites](#prerequisites)
-- [Project Structure](#project-structure)
-- [Backend Setup](#backend-setup)
-- [Frontend Setup](#frontend-setup)
-- [Running the Application](#running-the-application)
-- [Database Migrations](#database-migrations)
+The project runs entirely in Docker. All commands below assume Docker Desktop (or Colima)
+with Compose v2.
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed on your system:
+- Docker with Compose v2 (`docker compose version`)
+- A [Clerk](https://dashboard.clerk.com/) application — you need both its publishable and
+  secret key
+- A [Google Maps](https://console.cloud.google.com/) API key with the Maps JavaScript API
+  enabled
 
-### Required Software
+You do **not** need Python, Node, `uv`, or a local PostgreSQL install.
 
-- **Python 3.13+** - [Download Python](https://www.python.org/downloads/)
-- **Node.js 18+** and **npm** - [Download Node.js](https://nodejs.org/)
-- **PostgreSQL 14+** - [Download PostgreSQL](https://www.postgresql.org/download/)
-- **uv** (Python package manager) - Install with: `pip install uv`
+## Setup
 
-### Required API Keys
-
-You'll need to set up accounts and obtain API keys for:
-
-- **Clerk** (Authentication) - [Get API keys at clerk.com](https://clerk.com/)
-- **Google Maps API** (Map display) - [Get API key at Google Cloud Console](https://console.cloud.google.com/)
-
-## Project Structure
-
-```
-HolylandAward/
-├── backend/          # FastAPI backend server
-│   ├── src/          # Source code
-│   ├── alembic/      # Database migrations
-│   └── pyproject.toml
-└── frontend/         # React + Vite frontend
-    ├── src/          # Source code
-    └── package.json
-```
-
-## Backend Setup
-
-### 1. Database Setup
-
-#### Create PostgreSQL Database
+**1. Create your environment file**
 
 ```bash
-# Start PostgreSQL service (if not already running)
-# On macOS with Homebrew:
-brew services start postgresql@14
-
-# Create the database
-createdb holyland_award
-
-# Or using psql:
-psql postgres
-CREATE DATABASE holyland_award;
-\q
+cp .env.example .env
 ```
 
-#### Configure Database Connection
+Fill in the Clerk and Google Maps values (see [Environment variables](#environment-variables)).
+The `POSTGRES_*` entries have working defaults and can be left as-is for local development.
 
-The backend uses the `DATABASE_URL` environment variable. You can set it in your shell or create a `.env` file in the `backend/` directory:
+**2. Create the database volume (one time)**
+
+`docker-compose.yml` declares the Postgres volume as `external`, so it must exist before the
+first start or Compose will refuse to run:
 
 ```bash
-cd backend
-echo "DATABASE_URL=postgresql://your_username@localhost:5432/holyland_award" > .env
+docker volume create holyland_postgres_data
 ```
 
-Replace `your_username` with your PostgreSQL username. If you're using port 5433 or a different configuration, adjust accordingly.
-
-### 2. Install Backend Dependencies
+**3. Start everything**
 
 ```bash
-cd backend
-
-# Install dependencies using uv
-uv sync
+docker compose up
 ```
 
-This will install all required Python packages including:
-- FastAPI
-- SQLAlchemy
-- Alembic
-- psycopg2-binary
-- Clerk SDK
-- ADIF parser
-- And more...
+The backend applies database migrations automatically on startup, so there is no separate
+migration step for a fresh checkout.
 
-### 3. Run Database Migrations
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:1293 |
+| API docs (Swagger) | http://localhost:1293/docs |
+| PostgreSQL | `localhost:5434` |
+
+Both frontend and backend hot-reload; source directories are mounted into the containers, so
+edits apply without a rebuild.
+
+## Environment variables
+
+All local configuration lives in a single `.env` at the repo root — Compose reads it and
+passes the values into the containers. There are no per-directory `.env` files in the Docker
+workflow.
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `CLERK_SECRET_KEY` | **yes** | Backend. Must start with `sk_test_` / `sk_live_`; the app refuses to start otherwise. |
+| `CLERK_PUBLISHABLE_KEY` | **yes** | Frontend. Compose maps this into the container as `VITE_CLERK_PUBLISHABLE_KEY` — set **this** name, not the `VITE_`-prefixed one. |
+| `VITE_GOOGLE_MAPS_API_KEY` | **yes** | Frontend. Maps will not render without it. |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | no | Default to `holyland_user` / `holyland_password` / `holyland_award`. `DATABASE_URL` is assembled from these by Compose. |
+| `VITE_API_BASE_URL` | no | Defaults to `http://localhost:1293`. |
+| `FRONTEND_URL` | no | Backend CORS origin; defaults to `http://localhost:5173`. |
+
+The publishable and secret Clerk keys must come from the **same Clerk instance** — a mismatch
+produces token-verification failures at sign-in rather than an obvious error.
+
+## Common tasks
+
+**Logs**
 
 ```bash
-# Apply all database migrations
-uv run alembic upgrade head
+docker compose logs -f            # everything
+docker compose logs -f backend    # one service
 ```
 
-This will create all necessary tables (users, qso_logs, etc.) in your database.
-
-### 4. Configure Environment Variables (Optional)
-
-Add any additional environment variables to your `.env` file:
+**Tests** (43 tests, run against in-memory SQLite)
 
 ```bash
-# Database
-DATABASE_URL=postgresql://your_username@localhost:5432/holyland_award
-
-# Clerk (if using authentication in backend)
-CLERK_SECRET_KEY=your_clerk_secret_key
+docker compose exec backend pytest
+docker compose exec backend pytest tests/test_adif_service.py          # one file
+docker compose exec backend pytest tests/test_users_service.py::test_x  # one test
 ```
 
-## Frontend Setup
-
-### 1. Install Frontend Dependencies
+**Frontend lint and typecheck**
 
 ```bash
-cd frontend
-
-# Install dependencies
-npm install
+docker compose exec frontend npm run lint
+docker compose exec frontend npm run build   # typechecking happens here, not in dev
 ```
 
-This will install all required packages including:
-- React 19
-- Vite
-- Clerk React SDK
-- Google Maps API loader
-- TanStack Query
-- Tailwind CSS
-- And more...
+**Database migrations**
 
-### 2. Configure Environment Variables
-
-Create a `.env` file in the `frontend/` directory:
+Migrations run automatically when the backend container starts. To drive them manually:
 
 ```bash
-cd frontend
-touch .env
+docker compose exec backend alembic upgrade head
+docker compose exec backend alembic revision --autogenerate -m "Description of change"
+docker compose exec backend alembic current
+docker compose exec backend alembic history
+docker compose exec backend alembic downgrade -1
 ```
 
-Add the following environment variables:
+When you add a model, import it in `backend/alembic/env.py` — autogenerate silently misses
+models that aren't imported there, and may even propose dropping their tables.
+
+**Database shell**
 
 ```bash
-# Clerk Authentication
-VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-
-# Google Maps API
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-
-# Backend API URL (optional, defaults to http://localhost:1293)
-VITE_API_BASE_URL=http://localhost:1293
+docker compose exec db psql -U holyland_user -d holyland_award
 ```
 
-**Important:** Replace the placeholder values with your actual API keys:
-- Get your Clerk publishable key from your [Clerk Dashboard](https://dashboard.clerk.com/)
-- Get your Google Maps API key from [Google Cloud Console](https://console.cloud.google.com/)
-
-## Running the Application
-
-### Start the Backend Server
+**Rebuild after changing a Dockerfile or dependency**
 
 ```bash
-cd backend
-
-# Run the FastAPI server
-uv run src/main.py
+docker compose up --build
 ```
 
-The backend API will be available at `http://localhost:1293`
-
-### Start the Frontend Development Server
-
-In a new terminal:
+**Reset the database**
 
 ```bash
-cd frontend
-
-# Run the Vite development server
-npm run dev
+docker compose down
+docker volume rm holyland_postgres_data && docker volume create holyland_postgres_data
+docker compose up
 ```
 
-The frontend will be available at `http://localhost:5173`
+## Project layout
 
-### Access the Application
-
-Open your browser and navigate to:
-- **Frontend:** http://localhost:5173
-- **Backend API Docs:** http://localhost:1293/docs (FastAPI Swagger UI)
-
-## Database Migrations
-
-### Creating a New Migration
-
-When you modify database models, create a new migration:
-
-```bash
-cd backend
-
-# Auto-generate migration from model changes
-uv run alembic revision --autogenerate -m "Description of your changes"
-
-# Apply the migration
-uv run alembic upgrade head
+```
+backend/          FastAPI app
+  src/            domain packages: qsos/, users/, system_settings/
+                  each with models.py, schema.py, repository.py, router.py, service.py
+  alembic/        migrations
+  tests/          pytest suite
+frontend/         React 19 + Vite SPA
+  src/api/        TanStack Query hooks, one per endpoint
+  src/components/ pages and UI (shadcn/ui in components/ui)
 ```
 
-### Rolling Back Migrations
+Backend imports are rooted at `src/` — `from qsos.repository import ...`, never
+`from src.qsos...`. See [CLAUDE.md](CLAUDE.md) for the architectural detail behind that and
+other non-obvious conventions.
 
-```bash
-# Rollback one migration
-uv run alembic downgrade -1
+## Troubleshooting
 
-# Rollback to a specific revision
-uv run alembic downgrade <revision_id>
-```
+**`docker compose up` fails with an external volume error** — you skipped step 2; run
+`docker volume create holyland_postgres_data`.
 
-### View Migration History
+**Backend exits immediately on startup** — usually a missing or malformed `CLERK_SECRET_KEY`
+or `DATABASE_URL`; both are validated at import time. Check `docker compose logs backend`.
 
-```bash
-uv run alembic history
-```
+**Sign-in fails with a token error** — the publishable and secret Clerk keys are from
+different Clerk instances.
 
-### Resetting the Database
+**Maps don't render** — `VITE_GOOGLE_MAPS_API_KEY` is unset, or the key's HTTP-referrer
+restrictions don't include `http://localhost:5173`.
 
-If you need to start fresh with a clean database:
-
-```bash
-cd backend
-
-# Option 1: Drop and recreate using psql
-psql -h localhost -p 5432 -d postgres -U your_username -c "DROP DATABASE IF EXISTS holyland_award"
-psql -h localhost -p 5432 -d postgres -U your_username -c "CREATE DATABASE holyland_award"
-
-# Option 2: Using createdb/dropdb commands (easier)
-dropdb holyland_award
-createdb holyland_award
-
-# Then run migrations to recreate all tables
-uv run alembic upgrade head
-```
-
-**Note:** Adjust the port number (`5432` or `5433`) and username based on your PostgreSQL configuration.
-
-## Development Tips
-
-### Backend Development
-
-- The backend uses **FastAPI** with automatic API documentation at `/docs`
-- Database models are defined in `src/users/models.py` and `src/qsos/models.py`
-- API routes are organized in router files (`src/users/router.py`, `src/qsos/router.py`)
-- ADIF log file parsing is handled in `src/adif_service.py`
-
-### Frontend Development
-
-- Built with **React 19** and **Vite** for fast development
-- Uses **Clerk** for authentication
-- **TanStack Query** for server state management
-- **Tailwind CSS** for styling, with shadcn design system
-- **Google Maps API** for map visualization
-
-### Common Issues
-
-**Database connection errors:**
-- Verify PostgreSQL is running: `brew services list` (macOS) or `systemctl status postgresql` (Linux)
-- Check your `DATABASE_URL` in the `.env` file
-- Ensure the database exists: `psql -l`
-
-**Frontend can't connect to backend:**
-- Verify backend is running on port 1293
-- Check CORS settings in `backend/src/main.py`
-- Verify `VITE_API_BASE_URL` in frontend `.env`
-
-**Missing API keys:**
-- Ensure all required environment variables are set in `.env` files
-- Restart development servers after changing `.env` files
+**Port already in use** — 5173, 1293, or 5434 is taken; change the host-side port in
+`docker-compose.yml`.
 
 ## Contributing
 
-1. Create a new branch for your feature
-2. Make your changes
-3. Test locally
-4. Submit a pull request
+1. Branch off `dev`
+2. Make your changes and add tests
+3. Verify locally: `docker compose exec backend pytest` and `docker compose exec frontend npm run lint`
+4. Open a pull request **against `dev`**, not `master`
+
+`dev` is the staging branch and `master` is production; changes reach production through a
+`dev` → `master` pull request. See [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Further documentation
+
+- [DOCKER.md](DOCKER.md) — Docker setup detail and server-side image usage
+- [DEPLOYMENT.md](DEPLOYMENT.md) — environments, CI/CD, secrets, Clerk key rotation
+- [CLAUDE.md](CLAUDE.md) — architecture and conventions
+- [backend/MIGRATIONS.md](backend/MIGRATIONS.md) — migration workflow
+- [frontend/DESIGN_SYSTEM.md](frontend/DESIGN_SYSTEM.md) — colors, typography, RTL support
 
 ## License
 

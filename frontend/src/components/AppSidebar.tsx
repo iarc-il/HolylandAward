@@ -83,13 +83,13 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-2 py-3 flex flex-col items-center gap-2">
+        <div className="pl-7 pr-2 py-3 flex flex-col items-center gap-2 w-fit">
           <img src={logo} alt="Holyland Award Logo" className="h-20 w-auto" />
           <h2 className="text-xl font-bold text-primary">HolyLand Award</h2>
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
+        <SidebarGroup className="pl-7">
           <SidebarGroupLabel className="text-sm font-semibold">
             Navigation
           </SidebarGroupLabel>

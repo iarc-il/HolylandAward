@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import squaresGridMapTop from "@/assets/squares_grid_map_top.webp";
+import squaresGridMapBottom from "@/assets/squares_grid_map_bottom.webp";
 
 const RulesPage = () => {
   const [language, setLanguage] = useState<"en" | "he">("en");
@@ -58,6 +60,26 @@ const RulesPage = () => {
     </div>
   );
 };
+
+// Static images of the squares grid (north/south halves side by side) - a
+// live Google Map here needs the API key's HTTP referrer allowlist to cover
+// every route it's embedded on, which keeps breaking as new pages are
+// added. Plain images have no such dependency and never show a broken-map
+// error.
+const SquaresGridMaps = () => (
+  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+    <img
+      src={squaresGridMapTop}
+      alt="Map of the Holyland squares grid - north half"
+      className="w-full sm:w-1/2 max-w-md rounded-xl border border-border"
+    />
+    <img
+      src={squaresGridMapBottom}
+      alt="Map of the Holyland squares grid - south half"
+      className="w-full sm:w-1/2 max-w-md rounded-xl border border-border"
+    />
+  </div>
+);
 
 const EnglishContent = () => {
   return (
@@ -131,7 +153,10 @@ const EnglishContent = () => {
           <p className="text-foreground mb-4">
             Geographic squares organized by administrative district
           </p>
-          
+
+          <SquaresGridMaps />
+
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* AK - Akko */}
             <div className="p-4 bg-background border border-border rounded-lg">
@@ -476,7 +501,10 @@ const HebrewContent = () => {
         <p className="text-foreground mb-4">
           ריבועים גיאוגרפיים מאורגנים לפי נפות אדמיניסטרטיביות
         </p>
-        
+
+        <SquaresGridMaps />
+
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* AK - Akko */}
           <div className="p-4 bg-background border border-border rounded-lg">
