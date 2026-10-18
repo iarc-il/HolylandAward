@@ -169,7 +169,7 @@ const WelcomePage = () => {
         <img
           src={awardCert}
           alt="Holyland Award Certificate, mounted on a wood plaque"
-          className="w-full h-auto max-h-[45vh] object-contain md:h-[80vh] md:w-auto md:max-h-none md:max-w-full flex-shrink-0 animate-float"
+          className="w-full h-auto max-h-[45vh] object-contain md:h-[min(calc(100vh-220px),calc(71.7vw-34px))] md:w-auto md:max-h-none md:max-w-full flex-shrink-0 animate-float"
         />
 
         <div className="w-full flex-shrink-0 flex flex-col items-stretch gap-2 px-4 pb-4 md:flex-row md:items-center md:justify-between md:gap-3 md:px-8 md:pb-1">
