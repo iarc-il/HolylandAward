@@ -63,7 +63,7 @@ const WelcomePage = () => {
           breathe. Below md this is hidden in favor of the in-flow, wrapped
           row right below, since absolute positioning has no room to work
           with on a narrow screen and would overlap the title. */}
-      <div className="hidden md:flex absolute top-6 right-14 items-center gap-3 z-20">
+      <div className="hidden min-[1650px]:flex absolute top-6 right-14 items-center gap-3 z-20">
         <Button
           variant="outline"
           onClick={() => setAuthView("signIn")}
@@ -88,7 +88,7 @@ const WelcomePage = () => {
       {/* Mobile-only equivalent of the row above: normal document flow
           instead of absolute, wraps and centers instead of assuming wide
           space to the side of a big title. */}
-      <div className="flex md:hidden flex-wrap items-center justify-center gap-2 pt-4 px-4">
+      <div className="flex min-[1650px]:hidden flex-wrap items-center justify-center gap-2 pt-4 px-4">
         <Button
           variant="outline"
           onClick={() => setAuthView("signIn")}
@@ -110,7 +110,7 @@ const WelcomePage = () => {
         </Button>
       </div>
 
-      <div className="max-w-4xl w-full mx-auto px-6 text-center flex-shrink-0 pt-2 md:pt-6 relative">
+      <div className="max-w-4xl w-full mx-auto px-6 text-center flex-shrink-0 pt-2 min-[1650px]:pt-6 relative">
         {/* Logo + Header - from md up, logos are absolutely positioned to
             either side of the title block (symmetric) instead of sitting
             in-flow beside it, so they don't shift the title/subtitle
