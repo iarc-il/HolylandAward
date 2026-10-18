@@ -10,6 +10,7 @@ dependencies = [
     "clerk-backend-api>=3.3.0",
     "fastapi>=0.116.1",
     "ngrok>=1.5.1",
+    "psycopg[binary]>=3.2",
     "psycopg2-binary>=2.9.10",
     "python-dotenv>=1.1.1",
     "python-multipart>=0.0.20",
