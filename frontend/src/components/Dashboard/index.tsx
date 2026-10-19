@@ -157,10 +157,10 @@ const Dashboard = () => {
                 <p className="text-sm">
                   To claim your certificate, send an email to{" "}
                   <a
-                    href="mailto:iarc.holyland.award@gmail.com"
+                    href="mailto:holyland.award@gmail.com"
                     className="font-semibold underline hover:text-green-600"
                   >
-                    iarc.holyland.award@gmail.com
+                    holyland.award@gmail.com
                   </a>
                 </p>
               </div>
