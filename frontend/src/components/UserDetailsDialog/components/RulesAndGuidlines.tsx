@@ -29,14 +29,14 @@ const RulesAndGuidlines: React.FC<RulesAndGuidlinesProps> = ({
         </DialogHeader>
         <div className="py-4 space-y-4">
           <div className="prose prose-sm max-w-none">
-            <h3 className="text-lg font-semibold mb-4">Holy Land Award</h3>
+            <h3 className="text-lg font-semibold mb-4">Holyland Award</h3>
 
             <h4 className="font-semibold mt-4 mb-2">
               Conditions for receiving the certificate:
             </h4>
 
             <p className="mb-3">
-              The Holy Land Award is granted for establishing contacts with
+              The Holyland Award is granted for establishing contacts with
               stations located in different squares within the State of Israel
               without any restrictions on the type of transmission or frequency
               bands.
