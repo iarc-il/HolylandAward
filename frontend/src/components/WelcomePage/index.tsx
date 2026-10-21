@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import awardCert from "@/assets/award_gold_wood.webp";
 import logo from "@/assets/logo.svg";
+import bannerWood from "@/assets/banner_wood.webp";
 import { useRegistrationStatus } from "@/api/useUserLimit";
 
 const WelcomePage = () => {
@@ -178,11 +179,11 @@ const WelcomePage = () => {
             caption, spans exactly the image's width (the column is w-fit
             from md up), and has no shadow/hover so nothing suggests it is
             clickable. */}
-        <div className="w-full md:w-0 md:min-w-full flex-shrink-0 mb-4 md:mb-1 rounded-lg bg-slate-900/85 text-white px-4 py-2 flex flex-col items-center gap-1 md:flex-row md:flex-wrap md:justify-center md:gap-x-3 select-none cursor-default">
+        <div className="w-[95.8%] md:w-0 md:min-w-[95.8%] flex-shrink-0 mb-4 md:mb-1 rounded-lg border-2 border-[#d6b05e] text-[#f6e7b4] [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] shadow-inner bg-cover bg-center px-4 py-2 flex flex-col items-center gap-1 md:flex-row md:flex-wrap md:justify-center md:gap-x-3 select-none cursor-default" style={{ backgroundImage: `url(${bannerWood})` }}>
           <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Track Your Progress</span>
-          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none opacity-60">&bull;</span>
+          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none text-[#d6b05e]">&bull;</span>
           <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Visualize Your Achievement</span>
-          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none opacity-60">&bull;</span>
+          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none text-[#d6b05e]">&bull;</span>
           <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Claim Certificate</span>
         </div>
       </div>
