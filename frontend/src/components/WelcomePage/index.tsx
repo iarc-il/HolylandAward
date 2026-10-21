@@ -172,16 +172,18 @@ const WelcomePage = () => {
           className="w-full h-auto max-h-[45vh] object-contain md:h-[min(calc(100vh-220px),calc(71.7vw-34px))] md:w-auto md:max-h-none md:max-w-full flex-shrink-0 animate-float"
         />
 
-        <div className="w-full flex-shrink-0 flex flex-col items-stretch gap-2 px-4 pb-4 md:flex-row md:items-center md:justify-between md:gap-3 md:px-8 md:pb-1">
-          <h3 className="font-semibold text-lg md:text-2xl bg-white rounded-lg px-4 py-2 md:py-1 text-center md:w-fit shadow-sm">
-            Track Progress
-          </h3>
-          <h3 className="font-semibold text-lg md:text-2xl bg-white rounded-lg px-4 py-2 md:py-1 text-center md:w-fit shadow-sm">
-            Visualize Achievement
-          </h3>
-          <h3 className="font-semibold text-lg md:text-2xl bg-white rounded-lg px-4 py-2 md:py-1 text-center md:w-fit shadow-sm">
-            Claim Certificate
-          </h3>
+        {/* One flat banner instead of three white pills - separate pills
+            looked like buttons and people tried to click them. A single
+            dark band with plain text and dot separators reads as a
+            caption, spans exactly the image's width (the column is w-fit
+            from md up), and has no shadow/hover so nothing suggests it is
+            clickable. */}
+        <div className="w-full md:w-0 md:min-w-full flex-shrink-0 mb-4 md:mb-1 rounded-lg bg-slate-900/85 text-white px-4 py-2 flex flex-col items-center gap-1 md:flex-row md:flex-wrap md:justify-center md:gap-x-3 select-none cursor-default">
+          <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Track Your Progress</span>
+          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none opacity-60">&bull;</span>
+          <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Visualize Your Achievement</span>
+          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none opacity-60">&bull;</span>
+          <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Claim Certificate</span>
         </div>
       </div>
 
