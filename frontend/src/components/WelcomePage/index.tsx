@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import awardCert from "@/assets/award_gold_wood.webp";
 import logo from "@/assets/logo.svg";
+import bannerWood from "@/assets/banner_wood.webp";
 import { useRegistrationStatus } from "@/api/useUserLimit";
 
 const WelcomePage = () => {
@@ -136,11 +137,11 @@ const WelcomePage = () => {
             className="hidden md:block absolute left-full ml-8 h-24 w-auto flex-shrink-0"
           />
           <div className="text-center">
-            <h1 className="text-3xl md:text-6xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl md:text-6xl font-bold [word-spacing:0.3em] text-gray-900 dark:text-white">
               Holyland Award
             </h1>
             <p className="text-base md:text-xl text-gray-600 dark:text-gray-300">
-              Track your amateur radio achievements across the Holy Land
+              Track your amateur radio achievements across the Holyland
             </p>
           </div>
         </div>
@@ -172,16 +173,16 @@ const WelcomePage = () => {
           className="w-full h-auto max-h-[45vh] object-contain md:h-[min(calc(100vh-220px),calc(71.7vw-34px))] md:w-auto md:max-h-none md:max-w-full flex-shrink-0 animate-float"
         />
 
-        <div className="w-full flex-shrink-0 flex flex-col items-stretch gap-2 px-4 pb-4 md:flex-row md:items-center md:justify-between md:gap-3 md:px-8 md:pb-1">
-          <h3 className="font-semibold text-lg md:text-2xl bg-white rounded-lg px-4 py-2 md:py-1 text-center md:w-fit shadow-sm">
-            Track Progress
-          </h3>
-          <h3 className="font-semibold text-lg md:text-2xl bg-white rounded-lg px-4 py-2 md:py-1 text-center md:w-fit shadow-sm">
-            Visualize Achievement
-          </h3>
-          <h3 className="font-semibold text-lg md:text-2xl bg-white rounded-lg px-4 py-2 md:py-1 text-center md:w-fit shadow-sm">
-            Claim Certificate
-          </h3>
+        {/* One flat banner instead of three white pills - separate pills
+            looked like buttons and people tried to click them. A single
+            dark band with plain text and dot separators reads as a
+            caption, spans exactly the image's width (the column is w-fit
+            from md up), and has no shadow/hover so nothing suggests it is
+            clickable. */}
+        <div className="w-[95.8%] md:w-0 md:min-w-[95.8%] flex-shrink-0 mb-4 md:mb-1 rounded-lg border-2 border-[#d6b05e] text-[#f6e7b4] [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] shadow-inner bg-cover bg-center px-4 py-2 flex flex-col items-center gap-1 md:flex-row md:flex-wrap md:justify-center md:gap-x-8 select-none cursor-default" style={{ backgroundImage: `url(${bannerWood})` }}>
+          <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Track Your Progress</span>
+          <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Visualize Your Achievement</span>
+          <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Claim Certificate</span>
         </div>
       </div>
 
