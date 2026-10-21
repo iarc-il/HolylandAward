@@ -137,11 +137,11 @@ const WelcomePage = () => {
             className="hidden md:block absolute left-full ml-8 h-24 w-auto flex-shrink-0"
           />
           <div className="text-center">
-            <h1 className="text-3xl md:text-6xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl md:text-6xl font-bold [word-spacing:0.3em] text-gray-900 dark:text-white">
               Holyland Award
             </h1>
             <p className="text-base md:text-xl text-gray-600 dark:text-gray-300">
-              Track your amateur radio achievements across the Holy Land
+              Track your amateur radio achievements across the Holyland
             </p>
           </div>
         </div>
@@ -179,11 +179,9 @@ const WelcomePage = () => {
             caption, spans exactly the image's width (the column is w-fit
             from md up), and has no shadow/hover so nothing suggests it is
             clickable. */}
-        <div className="w-[95.8%] md:w-0 md:min-w-[95.8%] flex-shrink-0 mb-4 md:mb-1 rounded-lg border-2 border-[#d6b05e] text-[#f6e7b4] [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] shadow-inner bg-cover bg-center px-4 py-2 flex flex-col items-center gap-1 md:flex-row md:flex-wrap md:justify-center md:gap-x-3 select-none cursor-default" style={{ backgroundImage: `url(${bannerWood})` }}>
+        <div className="w-[95.8%] md:w-0 md:min-w-[95.8%] flex-shrink-0 mb-4 md:mb-1 rounded-lg border-2 border-[#d6b05e] text-[#f6e7b4] [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] shadow-inner bg-cover bg-center px-4 py-2 flex flex-col items-center gap-1 md:flex-row md:flex-wrap md:justify-center md:gap-x-8 select-none cursor-default" style={{ backgroundImage: `url(${bannerWood})` }}>
           <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Track Your Progress</span>
-          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none text-[#d6b05e]">&bull;</span>
           <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Visualize Your Achievement</span>
-          <span aria-hidden="true" className="hidden md:inline md:text-[clamp(13px,1.35vw,22px)] leading-none text-[#d6b05e]">&bull;</span>
           <span className="font-semibold text-lg md:text-[clamp(13px,1.35vw,22px)] md:whitespace-nowrap">Claim Certificate</span>
         </div>
       </div>
