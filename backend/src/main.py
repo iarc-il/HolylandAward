@@ -1,6 +1,6 @@
 import uvicorn
 import adif_io
-import os
+import math
 
 
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, status, Request
@@ -48,6 +48,36 @@ bearer_scheme = HTTPBearer()
 
 
 PUBLIC_PATHS = {"/", "/maintenance-mode", "/docs", "/openapi.json", "/favicon.ico"}
+
+
+def _parse_freq(value) -> float:
+    """A QSO record without a usable FREQ must not crash the whole upload.
+
+    NaN/inf parse as floats but cannot be serialized to JSON, which would make
+    the upload response (and every later read of that row) fail, so they are
+    treated as missing too.
+    """
+    try:
+        freq = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return freq if math.isfinite(freq) else 0.0
+
+
+def _parse_adif(contents: bytes):
+    """Parse an uploaded ADIF file, turning unreadable input into a clear 400."""
+    # ADIF field lengths are byte counts, but adif_io slices by Python
+    # character count. Decoding as latin-1 keeps a 1:1 byte-to-character
+    # mapping so multi-byte UTF-8 content (e.g. Hebrew names/comments from
+    # N1MM) doesn't shift field boundaries and corrupt the parse.
+    try:
+        qsos, _header = adif_io.read_from_string(contents.decode("latin-1"))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This file is not a valid ADIF log (.adi).",
+        )
+    return qsos
 
 
 @app.middleware("http")
@@ -121,14 +151,7 @@ async def upload_file(
     spotter_callsigns = get_callsigns_for_user(db, user)
 
     contents = await file.read()
-    with open(f"temp_{file.filename}", "wb") as f:
-        f.write(contents)
-
-    # ADIF field lengths are byte counts, but adif_io slices by Python
-    # character count. Decoding as latin-1 keeps a 1:1 byte-to-character
-    # mapping so multi-byte UTF-8 content (e.g. Hebrew names/comments from
-    # N1MM) doesn't shift field boundaries and corrupt the parse.
-    qsos, header = adif_io.read_from_string(contents.decode("latin-1"))
+    qsos = _parse_adif(contents)
     adif_service = AdifService(qsos, spotter_callsigns=spotter_callsigns)
     valid_entries = adif_service.get_valid_entries()
 
@@ -137,7 +160,7 @@ async def upload_file(
     for entry in valid_entries:
         qso_obj = QSO(
             date=entry.get("date", ""),
-            freq=float(entry.get("freq", 0)),
+            freq=_parse_freq(entry.get("freq")),
             spotter=entry.get("spotter", ""),
             dx=entry.get("dx", ""),
             area=entry.get("area", ""),
@@ -146,8 +169,6 @@ async def upload_file(
 
     # Save to database using functional repository
     saved_qsos = insert_qsos(db, qso_objects)
-
-    os.remove(f"temp_{file.filename}")
 
     # Return organized response with QSO data
     return {
