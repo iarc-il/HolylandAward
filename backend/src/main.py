@@ -50,6 +50,14 @@ bearer_scheme = HTTPBearer()
 PUBLIC_PATHS = {"/", "/maintenance-mode", "/docs", "/openapi.json", "/favicon.ico"}
 
 
+def _parse_freq(value) -> float:
+    """A QSO record without a usable FREQ must not crash the whole upload."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 @app.middleware("http")
 async def maintenance_mode_check(request: Request, call_next):
     if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
@@ -137,7 +145,7 @@ async def upload_file(
     for entry in valid_entries:
         qso_obj = QSO(
             date=entry.get("date", ""),
-            freq=float(entry.get("freq", 0)),
+            freq=_parse_freq(entry.get("freq")),
             spotter=entry.get("spotter", ""),
             dx=entry.get("dx", ""),
             area=entry.get("area", ""),

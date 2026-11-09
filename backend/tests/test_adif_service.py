@@ -158,3 +158,11 @@ def test_get_valid_entries_dedupes_same_area_repeated_across_fields():
     entries = AdifService([record], spotter_callsigns=["4Z1ABC"]).get_valid_entries()
 
     assert [entry["area"] for entry in entries] == ["H08HF"]
+
+
+def test_parse_freq_tolerates_missing_or_empty_frequency():
+    from main import _parse_freq
+
+    assert _parse_freq("14.250") == 14.25
+    assert _parse_freq("") == 0.0
+    assert _parse_freq(None) == 0.0
