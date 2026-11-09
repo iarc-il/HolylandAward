@@ -10,7 +10,7 @@ type UploadResponse = {
   qsos: Qso[];
 };
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
 const FileUploader = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +40,7 @@ const FileUploader = () => {
       return;
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      setFileError("File is too large. Maximum size is 10MB.");
+      setFileError("File is too large. Maximum size is 20MB.");
       return;
     }
 
@@ -114,7 +114,7 @@ const FileUploader = () => {
               or click to browse (.adi)
             </p>
             <p className="text-sm text-muted-foreground">
-              Maximum file size: 10MB
+              Maximum file size: 20MB
             </p>
             <Button
               onClick={(e) => { e.stopPropagation(); handleClick(); }}
