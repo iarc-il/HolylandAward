@@ -186,3 +186,59 @@ def test_parse_adif_turns_unreadable_files_into_a_400():
         assert exc.value.status_code == 400
 
     assert len(_parse_adif(b"<CALL:5>W1ABC<EOR>")) == 1
+
+
+def test_get_unmatched_callsigns_lists_foreign_callsigns_with_squares():
+    def record(station, area="H08HF"):
+        return (
+            "<QSO_DATE:8>20240101<FREQ:6>14.250"
+            f"<STATION_CALLSIGN:{len(station)}>{station}"
+            f"<CALL:5>W1ABC<COMMENT:{len(area)}>{area}"
+        )
+
+    service = AdifService(
+        [
+            record("4X1OLD/P"),
+            record("4X1OLD", "J05HF"),
+            record("4X1OTH"),
+            record("4Z1ABC"),  # the user's own - not unmatched
+            record("4X1NOSQ", "NOSQR"),  # no valid square - not worth asking about
+        ],
+        spotter_callsigns=["4Z1ABC"],
+    )
+
+    assert service.get_unmatched_callsigns() == [
+        {"callsign": "4X1OLD", "qsos": 2},
+        {"callsign": "4X1OTH", "qsos": 1},
+    ]
+
+
+def test_clean_callsign_handles_suffixes_and_country_prefixes():
+    from adif_service import clean_callsign
+
+    cases = {
+        "4Z5SL": "4Z5SL",
+        "4z5sl/m": "4Z5SL",
+        "4Z5SL/P": "4Z5SL",
+        "4Z5SL/MM": "4Z5SL",
+        "4Z5SL/QRP": "4Z5SL",
+        "4Z5SL/1": "4Z5SL",
+        "OH/4Z5SL": "4Z5SL",
+        "VK9/4Z5SL/P": "4Z5SL",
+        " 4x/4z5sl ": "4Z5SL",
+        "": "",
+        "/": "",
+    }
+    for raw, expected in cases.items():
+        assert clean_callsign(raw) == expected, raw
+
+
+def test_get_valid_entries_matches_prefix_style_portable_callsign():
+    record = (
+        "<QSO_DATE:8>20240101<FREQ:6>14.250"
+        "<STATION_CALLSIGN:9>OH/4Z5SL/P<CALL:5>W1ABC<COMMENT:5>H08HF"
+    )
+
+    entries = AdifService([record], spotter_callsigns=["4Z5SL"]).get_valid_entries()
+
+    assert [entry["spotter"] for entry in entries] == ["4Z5SL"]

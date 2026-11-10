@@ -26,6 +26,7 @@ import {
   useCreateCallsignRequest,
   useCancelCallsignRequest,
   useUpdateRegion,
+  useRemoveLinkedCallsign,
 } from "@/api/useCallsignRequests";
 
 const regionOptions = [
@@ -107,6 +108,7 @@ const SettingsPage = () => {
   });
 
   const linkedCallsigns = profile?.linked_callsigns ?? [];
+  const removeLink = useRemoveLinkedCallsign();
 
   useEffect(() => {
     reset({
@@ -350,6 +352,21 @@ const SettingsPage = () => {
                   <span className="font-medium uppercase">
                     {link.new_callsign}
                   </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={removeLink.isPending}
+                    onClick={() =>
+                      removeLink.mutate(link.id, {
+                        onSuccess: () =>
+                          toast.success(`${link.old_callsign} unlinked`),
+                        onError: () => toast.error("Could not unlink callsign"),
+                      })
+                    }
+                  >
+                    Remove
+                  </Button>
                 </div>
               ))}
             </div>

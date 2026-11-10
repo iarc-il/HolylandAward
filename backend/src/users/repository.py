@@ -83,6 +83,19 @@ def add_linked_callsign(
         )
 
 
+def count_linked_callsigns(db: Session, user_id: int) -> int:
+    return db.query(LinkedCallsigns).filter(LinkedCallsigns.user_id == user_id).count()
+
+
+def get_linked_callsign_by_id(db: Session, link_id: int) -> Optional[LinkedCallsigns]:
+    return db.query(LinkedCallsigns).filter(LinkedCallsigns.id == link_id).first()
+
+
+def delete_linked_callsign(db: Session, link: LinkedCallsigns) -> None:
+    db.delete(link)
+    db.commit()
+
+
 def update_user_callsign(
     db: Session, clerk_user_id: str, callsign: str
 ) -> Optional[Users]:

@@ -30,6 +30,10 @@ class UserResponse(BaseModel):
     linked_callsigns: list[LinkedCallsignResponse] = Field(default_factory=list)
 
 
+class LinkedCallsignClaimRequest(BaseModel):
+    callsign: str
+
+
 class RegionUpdateRequest(BaseModel):
     region: int = Field(ge=0, lt=4)
 

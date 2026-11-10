@@ -645,6 +645,7 @@ def test_upload_file_parses_and_returns_inserted_qsos(
     assert response.json() == {
         "total_qsos": 1,
         "callsign": "4Z1ABC",
+        "unmatched_callsigns": [],
         "qsos": [
             {
                 "id": 10,
@@ -665,3 +666,104 @@ def test_upload_file_parses_and_returns_inserted_qsos(
         "area": "H08HF",
     }
     assert not Path("temp_unit_upload.adi").exists()
+
+
+def test_upload_reports_unmatched_callsigns_instead_of_dropping_silently(
+    client, db_session, monkeypatch
+):
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    record = (
+        "<QSO_DATE:8>20240101<FREQ:6>14.250"
+        "<STATION_CALLSIGN:6>4X1OLD<CALL:5>W1ABC<COMMENT:5>H08HF"
+    )
+    monkeypatch.setattr(
+        main_module.adif_io, "read_from_string", lambda s: ([record], {})
+    )
+    monkeypatch.setattr(main_module, "insert_qsos", lambda db, qsos: [])
+
+    response = client.post(
+        "/read-file", files={"file": ("log.adi", b"ignored", "text/plain")}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["unmatched_callsigns"] == [
+        {"callsign": "4X1OLD", "qsos": 1}
+    ]
+
+
+def test_user_can_link_old_callsign_and_it_counts_immediately(client, db_session):
+    user = create_user(db_session, callsign="4Z1NEW", region=1)
+
+    response = client.post("/user/linked-callsigns", json={"callsign": "4x1old/p"})
+
+    assert response.status_code == 200
+    links = response.json()["linked_callsigns"]
+    assert [(l["old_callsign"], l["new_callsign"]) for l in links] == [
+        ("4X1OLD", "4Z1NEW")
+    ]
+    from users.repository import get_callsigns_for_user
+
+    assert get_callsigns_for_user(db_session, user) == ["4X1OLD", "4Z1NEW"]
+
+
+def test_link_old_callsign_rejects_own_taken_and_invalid(client, db_session):
+    create_user(db_session, callsign="4Z1NEW", region=1)
+    db_session.add(Users(clerk_user_id="user_2", callsign="4X1TAKEN", region=1))
+    db_session.commit()
+
+    for bad in ("4Z1NEW", "4X1TAKEN", "!!", "ABCD"):
+        response = client.post("/user/linked-callsigns", json={"callsign": bad})
+        assert response.status_code == 400, bad
+
+
+def test_link_old_callsign_is_capped(client, db_session):
+    create_user(db_session, callsign="4Z1NEW", region=1)
+    for i in range(10):
+        assert (
+            client.post("/user/linked-callsigns", json={"callsign": f"4X{i}OLD"}).status_code
+            == 200
+        )
+
+    response = client.post("/user/linked-callsigns", json={"callsign": "4X9ZZZ"})
+
+    assert response.status_code == 400
+
+
+def test_user_can_remove_own_link_but_not_someone_elses(client, db_session):
+    user = create_user(db_session, callsign="4Z1NEW", region=1)
+    other = Users(clerk_user_id="user_2", callsign="4X1OTH", region=1)
+    db_session.add(other)
+    db_session.commit()
+    mine = LinkedCallsigns(user_id=user.id, old_callsign="4X1OLD", new_callsign="4Z1NEW")
+    theirs = LinkedCallsigns(user_id=other.id, old_callsign="4X1XXX", new_callsign="4X1OTH")
+    db_session.add_all([mine, theirs])
+    db_session.commit()
+
+    assert client.delete(f"/user/linked-callsigns/{theirs.id}").status_code == 404
+    response = client.delete(f"/user/linked-callsigns/{mine.id}")
+
+    assert response.status_code == 200
+    assert response.json()["linked_callsigns"] == []
+
+
+def test_admin_can_remove_any_link(client, db_session, monkeypatch):
+    user = create_user(db_session, callsign="4Z1NEW", region=1)
+    link = LinkedCallsigns(user_id=user.id, old_callsign="4X1OLD", new_callsign="4Z1NEW")
+    db_session.add(link)
+    db_session.commit()
+    patch_clerk_roles(monkeypatch, admin_user_ids={"user_1"})
+
+    response = client.delete(f"/admin/linked-callsigns/{link.id}")
+
+    assert response.status_code == 204
+    assert db_session.query(LinkedCallsigns).count() == 0
+
+
+def test_non_admin_cannot_use_admin_link_removal(client, db_session, monkeypatch):
+    user = create_user(db_session, callsign="4Z1NEW", region=1)
+    link = LinkedCallsigns(user_id=user.id, old_callsign="4X1OLD", new_callsign="4Z1NEW")
+    db_session.add(link)
+    db_session.commit()
+    patch_clerk_roles(monkeypatch, admin_user_ids=set())
+
+    assert client.delete(f"/admin/linked-callsigns/{link.id}").status_code == 403
