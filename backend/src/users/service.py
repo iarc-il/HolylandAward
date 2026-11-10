@@ -5,9 +5,13 @@ from users.repository import (
     get_user_by_clerk_id,
     get_user_by_callsign,
     get_user_by_linked_callsign,
+    get_callsigns_for_user,
+    count_linked_callsigns,
+    add_linked_callsign,
     update_user_callsign as repo_update_user_callsign,
     update_user_profile as repo_update_user_profile,
 )
+from adif_service import clean_callsign
 from users.models import Users
 from typing import Optional, Dict, Any
 
@@ -40,6 +44,36 @@ def ensure_callsign_available(db: Session, clerk_user_id: str, callsign: str) ->
     linked_user = get_user_by_linked_callsign(db, callsign)
     if linked_user and linked_user.clerk_user_id != clerk_user_id:
         raise ValueError(f"Callsign {callsign} is already taken")
+
+
+MAX_LINKED_CALLSIGNS = 10
+
+
+def claim_old_callsign(db: Session, user: Users, callsign: str) -> Users:
+    """Let a user link a callsign they held before; it then counts for them at once.
+
+    Stored as old_callsign -> the user's current callsign, the same shape an
+    admin-approved callsign change produces, so every existing query that uses
+    get_callsigns_for_user picks it up with no other change.
+    """
+    if not user.callsign:
+        raise ValueError("Set your callsign in your profile first")
+
+    # Uploads clean callsigns like "4X1AB/P" down to "4X1AB"; do the same here.
+    normalized = normalize_callsign(clean_callsign(callsign))
+
+    if normalized in get_callsigns_for_user(db, user):
+        raise ValueError(f"{normalized} is already one of your callsigns")
+    if count_linked_callsigns(db, user.id) >= MAX_LINKED_CALLSIGNS:
+        raise ValueError(
+            f"You can link at most {MAX_LINKED_CALLSIGNS} old callsigns. Contact an admin."
+        )
+    ensure_callsign_available(db, user.clerk_user_id, normalized)
+
+    add_linked_callsign(db, user.id, normalized, user.callsign)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 def handle_clerk_user_created(db: Session, webhook_data: Dict[str, Any]) -> Users:

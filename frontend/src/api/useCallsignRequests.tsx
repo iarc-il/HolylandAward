@@ -154,3 +154,60 @@ export const useCancelCallsignRequest = () => {
     },
   });
 };
+const invalidateCallsignData = (queryClient: ReturnType<typeof useQueryClient>) => {
+  queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+  queryClient.invalidateQueries({ queryKey: ["user-areas-regions"] });
+  queryClient.invalidateQueries({ queryKey: ["user-qsos"] });
+  queryClient.invalidateQueries({ queryKey: ["admin-user-qsos"] });
+};
+
+// Link an old callsign the user held earlier. Takes effect immediately - no
+// admin approval - so QSOs from that callsign count on the next upload.
+export const useClaimOldCallsign = () => {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (callsign: string) => {
+      const token = await getToken();
+      const response = await apiClient.post(
+        "/user/linked-callsigns",
+        { callsign },
+        { Authorization: `Bearer ${token}` },
+      );
+      return response.json();
+    },
+    onSuccess: () => invalidateCallsignData(queryClient),
+  });
+};
+
+export const useRemoveLinkedCallsign = () => {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (linkId: number) => {
+      const token = await getToken();
+      const response = await apiClient.delete(`/user/linked-callsigns/${linkId}`, {
+        Authorization: `Bearer ${token}`,
+      });
+      return response.json();
+    },
+    onSuccess: () => invalidateCallsignData(queryClient),
+  });
+};
+
+export const useAdminRemoveLinkedCallsign = () => {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (linkId: number) => {
+      const token = await getToken();
+      await apiClient.delete(`/admin/linked-callsigns/${linkId}`, {
+        Authorization: `Bearer ${token}`,
+      });
+    },
+    onSuccess: () => invalidateCallsignData(queryClient),
+  });
+};

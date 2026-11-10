@@ -2,11 +2,14 @@ import { Button } from "@ui/button";
 import React, { useRef, useState, useCallback } from "react";
 import useAdifUpload from "@/hooks/useFileUpload";
 import { Upload } from "lucide-react";
+import { toast } from "sonner";
+import { useClaimOldCallsign } from "@/api/useCallsignRequests";
 import QsoTable, { type Qso } from "./QsoTable";
 
 type UploadResponse = {
   total_qsos: number;
   callsign: string;
+  unmatched_callsigns?: { callsign: string; qsos: number }[];
   qsos: Qso[];
 };
 
@@ -17,6 +20,10 @@ const FileUploader = () => {
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // Kept so the same file can be uploaded again right after the user links an
+  // old callsign, without asking them to pick it a second time.
+  const lastFileRef = useRef<File | null>(null);
+  const claimOldCallsign = useClaimOldCallsign();
   const {
     mutate: uploadFile,
     isPending,
@@ -45,6 +52,7 @@ const FileUploader = () => {
     }
 
     setFileError(null);
+    lastFileRef.current = file;
     uploadFile(
       { file },
       {
@@ -53,6 +61,17 @@ const FileUploader = () => {
       }
     );
   }, [reset, uploadFile]);
+
+  const handleClaimCallsign = (callsign: string) => {
+    claimOldCallsign.mutate(callsign, {
+      onSuccess: () => {
+        toast.success(`${callsign} linked to your account`);
+        if (lastFileRef.current) processFile(lastFileRef.current);
+      },
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Could not link callsign"),
+    });
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -165,12 +184,54 @@ const FileUploader = () => {
                 </div>
               </div>
               <p className="text-foreground text-sm mt-1">
-                Processed {uploadResult.total_qsos} new QSO entries for{" "}
+                {uploadResult.total_qsos === 0
+                  ? "No new squares found in this file for "
+                  : `Added ${uploadResult.total_qsos} new square${uploadResult.total_qsos === 1 ? "" : "s"} for `}
                 <span className="font-semibold">{uploadResult.callsign}</span>
               </p>
             </div>
 
-            <QsoTable title="Uploaded QSOs" qsos={uploadResult.qsos} />
+            {(uploadResult.unmatched_callsigns?.length ?? 0) > 0 && (
+              <div className="p-5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900">
+                <div className="font-semibold">
+                  This file also has QSOs from other callsigns
+                </div>
+                <p className="text-sm mt-1">
+                  Your callsign is <span className="font-semibold">{uploadResult.callsign}</span>.
+                  If one of these was <span className="font-semibold">your own</span> earlier
+                  callsign, link it and its squares will count for you.
+                  Only link callsigns that really were yours.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {uploadResult.unmatched_callsigns?.map(({ callsign, qsos }) => (
+                    <div
+                      key={callsign}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white px-3 py-2"
+                    >
+                      <span className="text-sm">
+                        <span className="font-semibold">{callsign}</span>
+                        <span className="text-muted-foreground">
+                          {" "}— {qsos} QSO{qsos === 1 ? "" : "s"} with squares
+                        </span>
+                      </span>
+                      <Button
+                        size="sm"
+                        disabled={claimOldCallsign.isPending || isPending}
+                        onClick={() => handleClaimCallsign(callsign)}
+                      >
+                        Yes, it's my old callsign
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <QsoTable
+              title="New squares from this file"
+              qsos={uploadResult.qsos}
+              emptyMessage="No new squares found in this file."
+            />
           </div>
         )}
       </div>

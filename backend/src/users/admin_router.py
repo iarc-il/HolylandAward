@@ -17,6 +17,8 @@ from users.repository import (
     update_user_callsign,
     add_linked_callsign,
     update_user_region,
+    get_linked_callsign_by_id,
+    delete_linked_callsign,
     search_users,
     count_users,
     list_users_paginated,
@@ -26,6 +28,8 @@ from users.schema import (
     CallsignChangeRequestResponse,
     CallsignChangeRequestAction,
     ConnectedUsersResponse,
+    LinkedCallsignClaimRequest,
+    LinkedCallsignResponse,
     RegionUpdateRequest,
     UserResponse,
 )
@@ -138,6 +142,55 @@ async def create_callsign_change_request(
         user_email=user.email,
     )
     return resp
+
+
+@router.post("/user/linked-callsigns", response_model=UserResponse)
+async def claim_linked_callsign(
+    claim: LinkedCallsignClaimRequest,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    """Link an old callsign the user held earlier (no admin approval needed)."""
+    from utils import get_or_create_user_from_clerk
+    user = await get_or_create_user_from_clerk(db, user_id)
+
+    try:
+        user = user_service.claim_old_callsign(db, user, claim.callsign)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return UserResponse.model_validate(user)
+
+
+@router.delete("/user/linked-callsigns/{link_id}", response_model=UserResponse)
+async def remove_my_linked_callsign(
+    link_id: int,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    from utils import get_or_create_user_from_clerk
+    user = await get_or_create_user_from_clerk(db, user_id)
+
+    link = get_linked_callsign_by_id(db, link_id)
+    if not link or link.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+
+    delete_linked_callsign(db, link)
+    db.refresh(user)
+    return UserResponse.model_validate(user)
+
+
+@router.delete("/admin/linked-callsigns/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_remove_linked_callsign(
+    link_id: int,
+    db: Session = Depends(get_db),
+    admin_id: str = Depends(verify_admin),
+):
+    link = get_linked_callsign_by_id(db, link_id)
+    if not link:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+
+    delete_linked_callsign(db, link)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/user/callsign-requests", response_model=List[CallsignChangeRequestResponse])
@@ -384,6 +437,9 @@ async def admin_get_user_qsos(
     return {
         "callsign": user.callsign,
         "callsigns": callsigns,
+        "linked_callsigns": [
+            LinkedCallsignResponse.model_validate(link) for link in user.linked_callsigns
+        ],
         "total_qsos": total_qsos,
         "page": page,
         "page_size": page_size,

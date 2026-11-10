@@ -18,6 +18,7 @@ import {
   usePendingCallsignRequests,
   useApproveCallsignRequest,
   useDenyCallsignRequest,
+  useAdminRemoveLinkedCallsign,
 } from "@/api/useCallsignRequests";
 import { useAdminUserSearch } from "@/api/useAdminUserSearch";
 import { useAdminUserQsos } from "@/api/useAdminUserQsos";
@@ -629,6 +630,8 @@ const UserLogsSection = () => {
     : (searchData?.total ?? 0);
   const listLoading = isBrowsingAll ? allUsersLoading : searchLoading;
 
+  const removeLinkedCallsign = useAdminRemoveLinkedCallsign();
+
   const { data: qsosData, isLoading: qsosLoading } = useAdminUserQsos(
     selectedUserId,
     page,
@@ -740,6 +743,37 @@ const UserLogsSection = () => {
               totalQsos={qsosData?.total_qsos ?? 0}
               callsigns={qsosData?.callsigns ?? []}
             />
+
+            {(qsosData?.linked_callsigns?.length ?? 0) > 0 && (
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <h3 className="text-sm font-semibold">Linked callsigns</h3>
+                <div className="mt-2 space-y-2">
+                  {qsosData?.linked_callsigns?.map((link) => (
+                    <div
+                      key={link.id}
+                      className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium uppercase">
+                        {link.old_callsign} &rarr; {link.new_callsign}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={removeLinkedCallsign.isPending}
+                        onClick={() =>
+                          removeLinkedCallsign.mutate(link.id, {
+                            onSuccess: () => toast.success("Link removed"),
+                            onError: () => toast.error("Failed to remove link"),
+                          })
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <QsoTable
               title={`QSOs for ${selectedUserLabel}`}

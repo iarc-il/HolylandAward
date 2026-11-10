@@ -18,6 +18,7 @@ type QSO = {
 type UploadResponse = {
   total_qsos: number;
   callsign: string;
+  unmatched_callsigns?: { callsign: string; qsos: number }[];
   qsos: QSO[];
 };
 
