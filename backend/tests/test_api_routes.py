@@ -767,3 +767,22 @@ def test_non_admin_cannot_use_admin_link_removal(client, db_session, monkeypatch
     patch_clerk_roles(monkeypatch, admin_user_ids=set())
 
     assert client.delete(f"/admin/linked-callsigns/{link.id}").status_code == 403
+
+
+def test_callsign_request_emails_admin(client, db_session, monkeypatch):
+    from users import admin_router as admin_router_module
+
+    create_user(db_session, callsign="4Z1OLD", region=1)
+    calls = []
+    monkeypatch.setattr(
+        admin_router_module,
+        "send_admin_email",
+        lambda subject, body: calls.append((subject, body)),
+    )
+
+    response = client.post("/user/callsign-request", json={"callsign": "4Z1NEW"})
+
+    assert response.status_code == 200
+    assert len(calls) == 1
+    assert "4Z1OLD -> 4Z1NEW" in calls[0][0]
+    assert "4Z1NEW" in calls[0][1]
