@@ -1,6 +1,9 @@
 from math import ceil
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+import os
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from notifications import send_admin_email
 from presence import count_connected_users, mark_user_connected
 from users import service as user_service
 from users.service import normalize_callsign, ensure_callsign_available
@@ -17,6 +20,8 @@ from users.repository import (
     update_user_callsign,
     add_linked_callsign,
     update_user_region,
+    get_linked_callsign_by_id,
+    delete_linked_callsign,
     search_users,
     count_users,
     list_users_paginated,
@@ -26,6 +31,8 @@ from users.schema import (
     CallsignChangeRequestResponse,
     CallsignChangeRequestAction,
     ConnectedUsersResponse,
+    LinkedCallsignClaimRequest,
+    LinkedCallsignResponse,
     RegionUpdateRequest,
     UserResponse,
 )
@@ -85,6 +92,7 @@ async def get_connected_users(
 @router.post("/user/callsign-request", response_model=CallsignChangeRequestResponse)
 async def create_callsign_change_request(
     request_data: CallsignChangeRequestCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
@@ -125,6 +133,19 @@ async def create_callsign_change_request(
         new_callsign=new_callsign,
     )
 
+    # The request is already saved; the email is sent after the response, so a
+    # mail problem can never fail or slow down the user's request.
+    admin_url = os.getenv("FRONTEND_URL", "").split(",")[0].strip().rstrip("/")
+    background_tasks.add_task(
+        send_admin_email,
+        f"Holyland Award: callsign change request {request.old_callsign} -> {request.new_callsign}",
+        "A user asked to change their callsign.\n\n"
+        f"User: {user.email or user.username or user.clerk_user_id}\n"
+        f"Current callsign: {request.old_callsign}\n"
+        f"Requested callsign: {request.new_callsign}\n\n"
+        f"Approve or deny it on the Admin page: {admin_url}/admin\n",
+    )
+
     resp = CallsignChangeRequestResponse(
         id=request.id,
         user_id=request.user_id,
@@ -138,6 +159,55 @@ async def create_callsign_change_request(
         user_email=user.email,
     )
     return resp
+
+
+@router.post("/user/linked-callsigns", response_model=UserResponse)
+async def claim_linked_callsign(
+    claim: LinkedCallsignClaimRequest,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    """Link an old callsign the user held earlier (no admin approval needed)."""
+    from utils import get_or_create_user_from_clerk
+    user = await get_or_create_user_from_clerk(db, user_id)
+
+    try:
+        user = user_service.claim_old_callsign(db, user, claim.callsign)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return UserResponse.model_validate(user)
+
+
+@router.delete("/user/linked-callsigns/{link_id}", response_model=UserResponse)
+async def remove_my_linked_callsign(
+    link_id: int,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    from utils import get_or_create_user_from_clerk
+    user = await get_or_create_user_from_clerk(db, user_id)
+
+    link = get_linked_callsign_by_id(db, link_id)
+    if not link or link.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+
+    delete_linked_callsign(db, link)
+    db.refresh(user)
+    return UserResponse.model_validate(user)
+
+
+@router.delete("/admin/linked-callsigns/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_remove_linked_callsign(
+    link_id: int,
+    db: Session = Depends(get_db),
+    admin_id: str = Depends(verify_admin),
+):
+    link = get_linked_callsign_by_id(db, link_id)
+    if not link:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+
+    delete_linked_callsign(db, link)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/user/callsign-requests", response_model=List[CallsignChangeRequestResponse])
@@ -384,6 +454,9 @@ async def admin_get_user_qsos(
     return {
         "callsign": user.callsign,
         "callsigns": callsigns,
+        "linked_callsigns": [
+            LinkedCallsignResponse.model_validate(link) for link in user.linked_callsigns
+        ],
         "total_qsos": total_qsos,
         "page": page,
         "page_size": page_size,

@@ -3,6 +3,24 @@ from area_grids import AREAS
 from qsos.schema import QSO
 
 
+def clean_callsign(callsign: str) -> str:
+    """
+    Reduce a logged callsign to the station's main callsign.
+
+    Portable/mobile markers can follow the callsign (4Z5SL/P, 4Z5SL/M, 4Z5SL/QRP,
+    4Z5SL/1) or precede it as a country prefix (OH/4Z5SL, VK9/4Z5SL/P). In every
+    such form the main callsign is the longest part between slashes, so that
+    is what is kept.
+    """
+    if not callsign:
+        return ""
+
+    parts = [part for part in callsign.strip().upper().split("/") if part]
+    if not parts:
+        return ""
+    return max(parts, key=len)  # max() keeps the first of equal-length parts
+
+
 class AdifService:
     def __init__(self, qsos, spotter_callsigns: list[str]):
         self.qsos = [self._get_required_fields(self._qso_to_dict(qso)) for qso in qsos]
@@ -88,18 +106,9 @@ class AdifService:
 
     def _clean_callsign(self, callsign: str) -> str:
         """
-        Clean a callsign by removing forward slash and any character following it.
+        Clean a callsign: drop /P, /M, /QRP... suffixes and country prefixes.
         """
-        if not callsign:
-            return ""
-
-        callsign = callsign.strip().upper()
-
-        # Find the forward slash and take everything before it
-        slash_index = callsign.find("/")
-        if slash_index != -1:
-            return callsign[:slash_index]
-        return callsign
+        return clean_callsign(callsign)
 
     def _get_spotter(self, qso_dict: dict) -> str:
         """
@@ -113,6 +122,37 @@ class AdifService:
         elif operator in self.spotter_callsigns:
             return operator
         return ""  # No spotter found
+
+    def get_unmatched_callsigns(self, limit: int = 5) -> list[dict]:
+        """
+        Callsigns found as STATION_CALLSIGN/OPERATOR in QSOs that were skipped
+        because they are not the user's own - e.g. an old callsign the user
+        held earlier. Only QSOs that actually contain a valid square count, so
+        the user is not asked about callsigns that would add nothing.
+        Returns [{"callsign": str, "qsos": int}], most QSOs first.
+        """
+        counts: dict[str, int] = {}
+        for qso in self.qsos:
+            if self._get_spotter(qso) or not self._get_areas(qso):
+                continue
+            found = set()
+            for field in ("STATION_CALLSIGN", "OPERATOR"):
+                callsign = self._clean_callsign(qso.get(field, ""))
+                if callsign and self._looks_like_callsign(callsign):
+                    found.add(callsign)
+            for callsign in found:
+                counts[callsign] = counts.get(callsign, 0) + 1
+
+        ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+        return [{"callsign": cs, "qsos": n} for cs, n in ranked[:limit]]
+
+    @staticmethod
+    def _looks_like_callsign(value: str) -> bool:
+        return (
+            re.fullmatch(r"[A-Z0-9]+", value) is not None
+            and re.search(r"[A-Z]", value) is not None
+            and re.search(r"\d", value) is not None
+        )
 
     def get_valid_entries(self) -> list[QSO]:
         """

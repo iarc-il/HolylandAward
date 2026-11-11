@@ -26,6 +26,7 @@ import {
   useCreateCallsignRequest,
   useCancelCallsignRequest,
   useUpdateRegion,
+  useRemoveLinkedCallsign,
 } from "@/api/useCallsignRequests";
 
 const regionOptions = [
@@ -107,6 +108,7 @@ const SettingsPage = () => {
   });
 
   const linkedCallsigns = profile?.linked_callsigns ?? [];
+  const removeLink = useRemoveLinkedCallsign();
 
   useEffect(() => {
     reset({
@@ -241,6 +243,26 @@ const SettingsPage = () => {
         {statusBadge()}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Fields laid out as a 2-column grid (1 column on phones). Username and
+              email are read-only: they come from the sign-in account. */}
+          <div className="grid grid-cols-1 items-start gap-x-6 gap-y-5 sm:grid-cols-2">
+          {profile?.username && (
+            <div className="space-y-2">
+              <label htmlFor="username" className="text-sm font-medium">
+                Username
+              </label>
+              <Input id="username" value={profile.username} readOnly disabled />
+            </div>
+          )}
+          {profile?.email && (
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email
+              </label>
+              <Input id="email" value={profile.email} readOnly disabled />
+            </div>
+          )}
+
           <div className="space-y-2">
             <label htmlFor="callsign" className="text-sm font-medium">
               Callsign
@@ -298,6 +320,7 @@ const SettingsPage = () => {
               </p>
             )}
           </div>
+          </div>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
             <Button
@@ -350,6 +373,21 @@ const SettingsPage = () => {
                   <span className="font-medium uppercase">
                     {link.new_callsign}
                   </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={removeLink.isPending}
+                    onClick={() =>
+                      removeLink.mutate(link.id, {
+                        onSuccess: () =>
+                          toast.success(`${link.old_callsign} unlinked`),
+                        onError: () => toast.error("Could not unlink callsign"),
+                      })
+                    }
+                  >
+                    Remove
+                  </Button>
                 </div>
               ))}
             </div>

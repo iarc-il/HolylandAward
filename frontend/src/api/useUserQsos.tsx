@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api";
 export type UserQsosResponse = {
   callsign: string;
   callsigns: string[];
+  linked_callsigns?: { id: number; old_callsign: string; new_callsign: string }[];
   total_qsos: number;
   page: number;
   page_size: number;

@@ -154,6 +154,9 @@ async def upload_file(
     qsos = _parse_adif(contents)
     adif_service = AdifService(qsos, spotter_callsigns=spotter_callsigns)
     valid_entries = adif_service.get_valid_entries()
+    # Callsigns in the file that are not the user's (e.g. an old callsign) -
+    # the frontend offers to link them instead of silently dropping the QSOs.
+    unmatched_callsigns = adif_service.get_unmatched_callsigns()
 
     # Convert valid entries to QSO schema objects
     qso_objects = []
@@ -174,6 +177,7 @@ async def upload_file(
     return {
         "total_qsos": len(saved_qsos),
         "callsign": spotter_callsign,
+        "unmatched_callsigns": unmatched_callsigns,
         "qsos": [
             {
                 "id": qso.id,
