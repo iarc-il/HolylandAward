@@ -9,6 +9,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
@@ -27,6 +28,7 @@ import { SignOutButton } from "@clerk/clerk-react";
 import ContactDialog from "./ContactDialog";
 import logo from "@/assets/logo.svg";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { usePendingCallsignRequests } from "@/api/useCallsignRequests";
 
 // Menu items for the sidebar
 const items = [
@@ -68,6 +70,14 @@ const AppSidebar = () => {
   const { setOpenMobile, isMobile } = useSidebar();
   const { isAdmin } = useIsAdmin();
   const visibleItems = isAdmin ? [...items, adminItem] : items;
+  // Admins get a count of waiting callsign-change requests on the Admin menu
+  // item (the site sends no email). Only fetched for admins - the endpoint is
+  // admin-only - and re-checked every minute.
+  const { data: pendingRequests } = usePendingCallsignRequests({
+    enabled: isAdmin,
+    refetchInterval: 60_000,
+  });
+  const pendingCount = isAdmin ? (pendingRequests?.length ?? 0) : 0;
 
   const closeMobileSidebar = () => {
     if (isMobile) {
@@ -107,6 +117,14 @@ const AppSidebar = () => {
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
+                  {item.url === "/admin" && pendingCount > 0 && (
+                    <SidebarMenuBadge
+                      className="bg-red-600 text-white"
+                      aria-label={`${pendingCount} pending callsign requests`}
+                    >
+                      {pendingCount}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>

@@ -31,8 +31,11 @@ export const useMyCallsignRequests = () => {
   });
 };
 
-export const usePendingCallsignRequests = () => {
+export const usePendingCallsignRequests = (
+  options: { enabled?: boolean; refetchInterval?: number } = {},
+) => {
   const { getToken, isSignedIn } = useAuth();
+  const { enabled = true, refetchInterval } = options;
 
   return useQuery({
     queryKey: ["admin", "callsign-requests"],
@@ -43,7 +46,8 @@ export const usePendingCallsignRequests = () => {
       });
       return response.json();
     },
-    enabled: isSignedIn,
+    enabled: isSignedIn && enabled,
+    refetchInterval,
   });
 };
 
