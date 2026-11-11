@@ -1,6 +1,9 @@
 from math import ceil
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+import os
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from notifications import send_admin_email
 from presence import count_connected_users, mark_user_connected
 from users import service as user_service
 from users.service import normalize_callsign, ensure_callsign_available
@@ -89,6 +92,7 @@ async def get_connected_users(
 @router.post("/user/callsign-request", response_model=CallsignChangeRequestResponse)
 async def create_callsign_change_request(
     request_data: CallsignChangeRequestCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user_id: str = Depends(verify_clerk_session),
 ):
@@ -127,6 +131,19 @@ async def create_callsign_change_request(
         user_id=user.id,
         old_callsign=user.callsign,
         new_callsign=new_callsign,
+    )
+
+    # The request is already saved; the email is sent after the response, so a
+    # mail problem can never fail or slow down the user's request.
+    admin_url = os.getenv("FRONTEND_URL", "").split(",")[0].strip().rstrip("/")
+    background_tasks.add_task(
+        send_admin_email,
+        f"Holyland Award: callsign change request {request.old_callsign} -> {request.new_callsign}",
+        "A user asked to change their callsign.\n\n"
+        f"User: {user.email or user.username or user.clerk_user_id}\n"
+        f"Current callsign: {request.old_callsign}\n"
+        f"Requested callsign: {request.new_callsign}\n\n"
+        f"Approve or deny it on the Admin page: {admin_url}/admin\n",
     )
 
     resp = CallsignChangeRequestResponse(
