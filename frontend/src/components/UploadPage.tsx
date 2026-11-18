@@ -9,6 +9,10 @@ import QsoTable, { type Qso } from "./QsoTable";
 type UploadResponse = {
   total_qsos: number;
   callsign: string;
+  qsos_in_file?: number; // QSO records read from the file
+  squares_in_file?: number; // distinct award squares found in the file
+  new_squares?: number; // of those, squares the user did not have yet
+  qsos_without_callsign?: number; // QSOs with no station callsign/operator
   unmatched_callsigns?: { callsign: string; qsos: number }[];
   qsos: Qso[];
 };
@@ -183,12 +187,60 @@ const FileUploader = () => {
                   Upload Successful!
                 </div>
               </div>
-              <p className="text-foreground text-sm mt-1">
-                {uploadResult.total_qsos === 0
-                  ? "No new squares found in this file for "
-                  : `Added ${uploadResult.total_qsos} new square${uploadResult.total_qsos === 1 ? "" : "s"} for `}
-                <span className="font-semibold">{uploadResult.callsign}</span>
-              </p>
+              {typeof uploadResult.squares_in_file === "number" ? (
+                <div className="text-foreground text-sm mt-1 space-y-1">
+                  <p>
+                    {uploadResult.squares_in_file === 0 ? (
+                      <>No squares found in this file for </>
+                    ) : (
+                      <>
+                        Found{" "}
+                        <b>
+                          {uploadResult.squares_in_file} square
+                          {uploadResult.squares_in_file === 1 ? "" : "s"}
+                        </b>{" "}
+                        in this file for{" "}
+                      </>
+                    )}
+                    <span className="font-semibold">{uploadResult.callsign}</span>
+                    {typeof uploadResult.qsos_in_file === "number" &&
+                      ` (${uploadResult.qsos_in_file} QSOs read)`}
+                    .
+                  </p>
+                  {uploadResult.squares_in_file > 0 && (
+                    <p>
+                      {uploadResult.new_squares === 0 ? (
+                        <>
+                          <b>None</b> of them are new - you already had all of
+                          them.
+                        </>
+                      ) : (
+                        <>
+                          <b className="text-green-600">
+                            {uploadResult.new_squares}
+                          </b>{" "}
+                          of them {uploadResult.new_squares === 1 ? "is" : "are"}{" "}
+                          new.
+                        </>
+                      )}
+                    </p>
+                  )}
+                  {(uploadResult.qsos_without_callsign ?? 0) > 0 && (
+                    <p className="text-muted-foreground">
+                      {uploadResult.qsos_without_callsign} QSOs in this file have
+                      no station callsign, so they were counted for{" "}
+                      {uploadResult.callsign}.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-foreground text-sm mt-1">
+                  {uploadResult.total_qsos === 0
+                    ? "No new squares found in this file for "
+                    : `Added ${uploadResult.total_qsos} new square${uploadResult.total_qsos === 1 ? "" : "s"} for `}
+                  <span className="font-semibold">{uploadResult.callsign}</span>
+                </p>
+              )}
             </div>
 
             {(uploadResult.unmatched_callsigns?.length ?? 0) > 0 && (
