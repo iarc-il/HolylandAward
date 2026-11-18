@@ -61,6 +61,20 @@ def get_callsigns_for_user(db: Session, user: Users) -> list[str]:
     return sorted(callsigns)
 
 
+def get_all_registered_callsigns(db: Session) -> list[str]:
+    """Every callsign (current, old and linked) of every registered user."""
+    callsigns = {
+        callsign
+        for (callsign,) in db.query(Users.callsign).filter(Users.callsign.isnot(None))
+    }
+    for old_callsign, new_callsign in db.query(
+        LinkedCallsigns.old_callsign, LinkedCallsigns.new_callsign
+    ):
+        callsigns.add(old_callsign)
+        callsigns.add(new_callsign)
+    return sorted(callsigns)
+
+
 def add_linked_callsign(
     db: Session, user_id: int, old_callsign: str, new_callsign: str
 ) -> None:

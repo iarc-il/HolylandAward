@@ -75,7 +75,7 @@ const StatsCard = ({
       )}
       {isClickable && !isLoading && !isError && !isComplete && (
         <p className="text-sm text-muted-foreground mt-2">
-          Click to view {title.toLowerCase()}
+          <b>Click</b> to view {title.toLowerCase()}
         </p>
       )}
     </div>

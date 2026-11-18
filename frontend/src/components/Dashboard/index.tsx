@@ -5,10 +5,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import UserDetailsDialog from "../UserDetailsDialog";
 import AreasRegionsDialog from "../AreasRegionsDialog";
+import RareSquaresDialog from "../RareSquaresDialog";
 import Map from "../Map";
 import StatsCard from "./components/StatsCard";
 import { useUserAreasAndRegions } from "../../api/useUserAreasAndRegions";
 import { useProfile } from "../../api/useProfile";
+import { useUnworkedAreas } from "../../api/useUnworkedAreas";
 import { getRequiredAmounts } from "@/lib/regionRequirements";
 import { Trophy, Mail, Sparkles } from "lucide-react";
 
@@ -17,6 +19,10 @@ const Dashboard = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [areasDialogOpen, setAreasDialogOpen] = useState(false);
   const [regionsDialogOpen, setRegionsDialogOpen] = useState(false);
+  const [rareDialogOpen, setRareDialogOpen] = useState(false);
+  // Rare squares button: paints the squares nobody has worked yet in red on
+  // the map (instead of the user's own green squares).
+  const [showRareOnMap, setShowRareOnMap] = useState(false);
   const [allowClose, setAllowClose] = useState(false);
 
   const {
@@ -26,6 +32,8 @@ const Dashboard = () => {
     isError: isProfileError,
     error: profileError,
   } = useProfile();
+  // Same cached request the map uses to paint the red squares.
+  const { data: unworkedData } = useUnworkedAreas();
   const {
     data: userAreasData,
     isLoading: areasLoading,
@@ -216,12 +224,73 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+        {/* Rare squares - switches the map to show, in red, the squares no
+            registered user has worked yet. "View list" opens the same squares
+            as a list. */}
+        <div
+          className={`rounded-xl border bg-card p-4 shadow-md ${
+            showRareOnMap ? "border-red-400 bg-red-50/60" : "border-border"
+          }`}
+        >
+          <Button
+            variant="ghost"
+            className="h-auto w-full justify-start gap-3 whitespace-normal p-0 text-left hover:bg-transparent"
+            aria-pressed={showRareOnMap}
+            onClick={() => setShowRareOnMap((value) => !value)}
+          >
+            <span className="text-left">
+              <span className="flex items-center gap-3 text-xl font-semibold">
+                <span className="mr-1">Rare squares</span>
+                {unworkedData && (
+                  <>
+                    <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-sm font-bold text-white">
+                      {unworkedData.total_unworked}
+                    </span>
+                    <span className="rounded-full bg-green-600 px-2.5 py-0.5 text-sm font-bold text-white">
+                      {unworkedData.worked_areas.length}
+                    </span>
+                  </>
+                )}
+              </span>
+              <span className="block text-sm font-normal text-muted-foreground">
+                {showRareOnMap ? (
+                  <>
+                    <span className="block">
+                      <span className="font-bold text-red-600">Red</span> =
+                      nobody worked it yet.
+                    </span>
+                    <span className="block">
+                      <span className="font-bold text-green-600">Green</span> =
+                      worked by someone.
+                    </span>
+                    <span className="block">
+                      <b>Click</b> to go back.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <b>Click</b> to show on the map the squares nobody has
+                    worked
+                  </>
+                )}
+              </span>
+            </span>
+          </Button>
+          <Button
+            variant="link"
+            size="sm"
+            className="mt-1 h-auto p-0"
+            onClick={() => setRareDialogOpen(true)}
+          >
+            View list
+          </Button>
+        </div>
       </div>
 
       {/* 3. Map - independent position */}
       <div className="absolute top-0 left-[344px] right-0 bottom-0">
         <div className="border border-border rounded-xl overflow-hidden shadow-md w-full h-full">
-          <Map />
+          <Map showUnworked={showRareOnMap} />
         </div>
       </div>
 
@@ -239,6 +308,12 @@ const Dashboard = () => {
         title="Squares"
         items={userAreasData?.areas ?? []}
         isLoading={areasLoading}
+      />
+
+      {/* Rare Squares Dialog */}
+      <RareSquaresDialog
+        isOpen={rareDialogOpen}
+        onClose={() => setRareDialogOpen(false)}
       />
 
       {/* Regions Dialog */}

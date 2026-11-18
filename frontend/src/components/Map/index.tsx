@@ -5,6 +5,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { areas } from "@/data/areas";
 import { Area } from "@/types/map";
 import { useUserAreasAndRegions } from "@/api/useUserAreasAndRegions";
+import { useUnworkedAreas } from "@/api/useUnworkedAreas";
 
 // Declare global JSTS
 declare global {
@@ -15,6 +16,9 @@ declare global {
 
 const MAP_TYPE_STORAGE_KEY = "holyland-map-type";
 const TOOLTIP_ENABLED_STORAGE_KEY = "holyland-map-tooltip-enabled";
+
+const WORKED_COLOR = "#00FF00"; // squares the user worked
+const UNWORKED_COLOR = "#FF0000"; // squares nobody has worked yet
 
 // District abbreviation -> full name, matching the list on the Rules page.
 const DISTRICT_NAMES: Record<string, string> = {
@@ -175,7 +179,13 @@ const createTextOverlayClass = () => {
   };
 };
 
-const Map: React.FC = () => {
+interface MapProps {
+  // When true, the squares no registered user has worked yet are painted red
+  // instead of the user's own (green) squares.
+  showUnworked?: boolean;
+}
+
+const Map: React.FC<MapProps> = ({ showUnworked = false }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null); // google.maps.Map when loaded
   const polygonsRef = useRef<any[]>([]); // google.maps.Polygon[] when loaded
@@ -195,6 +205,10 @@ const Map: React.FC = () => {
     data: { areas: userAreas } = {},
     isLoading,
   } = useUserAreasAndRegions();
+
+  const { data: unworkedData } = useUnworkedAreas();
+  const unworkedAreas = unworkedData?.areas;
+  const workedByAnyoneAreas = unworkedData?.worked_areas;
 
   // Grid constants from original HTML
   const northLat = 33.383;
@@ -270,8 +284,13 @@ const Map: React.FC = () => {
 
     // Alphabet index (skipping 'I')
     const alphabet = "ABCDEFGHJKLMNOPQRSTUVWXYZ"; // Note: 'I' is skipped
-    const letterIndex = alphabet.indexOf(letter.toUpperCase());
-    if (letterIndex === -1) {
+    // "Z" is the column just WEST of "A" (a sliver of the Gaza district lies
+    // west of the grid's own western edge: Z22AZ, Z23AZ), not the 24th
+    // letter - taking it as index 24 painted those squares far out in
+    // Jordan.
+    const letterIndex =
+      letter.toUpperCase() === "Z" ? -1 : alphabet.indexOf(letter.toUpperCase());
+    if (letter.toUpperCase() !== "Z" && letterIndex === -1) {
       throw new Error("Invalid letter (possibly 'I')");
     }
 
@@ -308,7 +327,7 @@ const Map: React.FC = () => {
 
   // Paint square by code - with proper JSTS polygon intersection
   const paintSquareByCode = useCallback(
-    (code: string) => {
+    (code: string, color: string = WORKED_COLOR) => {
       if (!map || !(window as any).jsts) return false;
 
       try {
@@ -367,28 +386,60 @@ const Map: React.FC = () => {
         // Fix any topology issues by buffering with 0 distance
         // This is a standard technique to clean up invalid geometries
         jstsSquarePolygon = jstsSquarePolygon.buffer(0);
-        jstsRegionPolygon = jstsRegionPolygon.buffer(0);
+        const rawRegionArea = jstsRegionPolygon.getArea();
+        const bufferedRegion = jstsRegionPolygon.buffer(0);
+        if (bufferedRegion.getArea() >= rawRegionArea * 0.5) {
+          jstsRegionPolygon = bufferedRegion;
+        } else {
+          // Some district outlines (e.g. BL) cross themselves, and
+          // buffer(0) then throws almost the whole district away, leaving
+          // its squares blank. Repair them by splitting the outline at its
+          // crossings and rebuilding the polygon from the pieces.
+          const jsts = (window as any).jsts;
+          const ringCoords = jstsRegionPolygon
+            .getExteriorRing()
+            .getCoordinates();
+          // A plain line (not a LinearRing), so the self-crossing outline
+          // is not rejected as invalid before it can be split.
+          const noded = geometryFactory
+            .createLineString(ringCoords)
+            .union(geometryFactory.createPoint(ringCoords[0]));
+          const polygonizer = new jsts.operation.polygonize.Polygonizer();
+          polygonizer.add(noded);
+          let repaired: any = null;
+          polygonizer.getPolygons().toArray().forEach((piece: any) => {
+            repaired = repaired ? repaired.union(piece) : piece;
+          });
+          jstsRegionPolygon = repaired ?? bufferedRegion;
+        }
 
-        const intersection = jstsSquarePolygon.intersection(jstsRegionPolygon);
+        let intersection = jstsSquarePolygon.intersection(jstsRegionPolygon);
 
-        // Convert intersection coordinates back to Google Maps format
+        // Paint only the part of the square that lies inside its district.
+        // A few award squares (e.g. D16RH, G16JS, H16JS, K19HB) only touch
+        // their district outline, so the clipped part is empty. For those,
+        // clip against the district outline widened by ~1.5 km: a thin
+        // strip along the border is painted, never the whole square, and
+        // none stays blank. The westernmost column (A, and Z) lies outside
+        // Israel (Egypt / sea, e.g. A27BS, A22BS): nothing is painted there.
+        if (!(intersection.getArea() > 0)) {
+          if (lngProjection <= 0) return false;
+          intersection = jstsSquarePolygon.intersection(
+            jstsRegionPolygon.buffer(0.015),
+          );
+          if (!(intersection.getArea() > 0)) return false;
+        }
         const coords = intersection.getCoordinates().map((coord: any) => {
           return { lat: coord.y, lng: coord.x };
         });
 
-        // Only draw if there's an actual intersection
-        if (coords.length === 0) {
-          console.log("No intersection found for", code);
-          return false;
-        }
-
         // Create and display the intersection polygon
         const intersectionArea = new (window as any).google.maps.Polygon({
           paths: coords,
-          strokeColor: "#00FF00", // Green for worked areas
+          strokeColor: color,
           strokeOpacity: 1.0,
           strokeWeight: 2,
-          fillColor: "#00FF00",
+          fillColor: color,
           fillOpacity: 0.3,
           zIndex: 999,
           // Otherwise this shape's own mouse events take over hover
@@ -424,7 +475,6 @@ const Map: React.FC = () => {
     const newGridLines: unknown[] = [];
     const newPolygons: unknown[] = [];
     const newOverlays: unknown[] = [];
-    const newGridOverlays: unknown[] = []; // For highlighting user areas
 
     // First, add area polygons
     areas.forEach((area: Area) => {
@@ -560,28 +610,52 @@ const Map: React.FC = () => {
       });
     }
 
-    // Paint user's worked areas using intersection logic
-    if (userAreas && userAreas.length > 0) {
-      userAreas.forEach((areaCode: string) => {
-        try {
-          const success = paintSquareByCode(areaCode);
-          if (!success) {
-            console.log("Could not paint area:", areaCode);
-          }
-        } catch (error) {
-          console.log("Failed to paint area:", areaCode, error);
+    // Normal view: the user's own worked squares (green). "Rare squares"
+    // view: every square no registered user has worked is red, and every
+    // other square (worked by at least one user) is green. Painted using
+    // intersection logic.
+    const squaresToPaint: { code: string; color: string }[] = showUnworked
+      ? [
+          ...(workedByAnyoneAreas ?? []).map((code) => ({
+            code,
+            color: WORKED_COLOR,
+          })),
+          ...(unworkedAreas ?? []).map((code) => ({
+            code,
+            color: UNWORKED_COLOR,
+          })),
+        ]
+      : (userAreas ?? []).map((code) => ({ code, color: WORKED_COLOR }));
+    // Paint every square only once: two translucent layers on the same
+    // square show as a darker colour.
+    const paintedCodes = new Set<string>();
+    squaresToPaint.forEach(({ code, color }) => {
+      if (paintedCodes.has(code)) return;
+      paintedCodes.add(code);
+      try {
+        const success = paintSquareByCode(code, color);
+        if (!success) {
+          console.log("Could not paint area:", code);
         }
-      });
-    }
+      } catch (error) {
+        console.log("Failed to paint area:", code, error);
+      }
+    });
 
     gridLinesRef.current = newGridLines;
     polygonsRef.current = newPolygons;
     overlaysRef.current = newOverlays;
-    gridOverlaysRef.current = newGridOverlays;
+    // NOTE: gridOverlaysRef (the painted squares) is filled by
+    // paintSquareByCode while painting. It must NOT be reassigned here, or
+    // clearMap() can no longer remove them and old squares (e.g. the green
+    // ones) stay on the map under the new (red) ones.
   }, [
     map,
     TextOverlay,
     userAreas,
+    unworkedAreas,
+    workedByAnyoneAreas,
+    showUnworked,
     clearMap,
     getSquareByLatLng,
     paintSquareByCode,
@@ -862,7 +936,7 @@ const Map: React.FC = () => {
     if (map && TextOverlay && mapInitialized.current && !isLoading) {
       showGrid(); // Re-render grid with user areas
     }
-  }, [userAreas, isLoading, map, TextOverlay, showGrid]);
+  }, [userAreas, unworkedAreas, showUnworked, isLoading, map, TextOverlay, showGrid]);
 
   return (
     <div className="flex flex-col h-full">
