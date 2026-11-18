@@ -24,7 +24,7 @@ const StatsCard = ({
 
   return (
     <div
-      className={`p-6 bg-card border rounded-xl shadow-md transition-all duration-300 relative overflow-hidden ${
+      className={`px-6 py-4 bg-card border rounded-xl shadow-md transition-all duration-300 relative overflow-hidden ${
         isComplete
           ? "border-green-500/50 bg-gradient-to-br from-green-50/50 to-emerald-50/50"
           : "border-border"
@@ -40,7 +40,7 @@ const StatsCard = ({
           <CheckCircle2 className="h-6 w-6 text-green-600 animate-in zoom-in duration-500" />
         </div>
       )}
-      <h3 className="font-semibold mb-3 text-xl flex items-center gap-2">
+      <h3 className="font-semibold mb-1 text-xl flex items-center gap-2">
         {title}
         {isComplete && (
           <Sparkles className="h-4 w-4 text-yellow-500 animate-pulse" />
@@ -74,7 +74,7 @@ const StatsCard = ({
         </div>
       )}
       {isClickable && !isLoading && !isError && !isComplete && (
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-1">
           <b>Click</b> to view {title.toLowerCase()}
         </p>
       )}
