@@ -107,7 +107,9 @@ const Dashboard = () => {
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-md">
           <h1 className="text-2xl font-bold text-foreground">
-            {profileLimitReached ? "Registration Closed" : "Profile Unavailable"}
+            {profileLimitReached
+              ? "Registration Closed"
+              : "Profile Unavailable"}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
             {profileLimitReached
@@ -178,7 +180,7 @@ const Dashboard = () => {
       )}
 
       {/* 2. Statistics Cards (Squares / Regions / Callsign) - independent position */}
-      <div className="absolute top-20 left-0 w-80 space-y-4">
+      <div className="absolute top-20 left-0 w-80 space-y-3">
         <StatsCard
           title="Squares"
           current={userAreasData?.total_areas ?? 0}
@@ -197,8 +199,8 @@ const Dashboard = () => {
           onClick={() => setRegionsDialogOpen(true)}
         />
 
-        <div className="p-6 bg-card border border-border rounded-xl shadow-md">
-          <h3 className="font-semibold mb-3 text-lg">Callsign</h3>
+        <div className="px-6 py-4 bg-card border border-border rounded-xl shadow-md">
+          <h3 className="font-semibold mb-1 text-lg">Callsign</h3>
           <p className="text-2xl font-bold text-primary">
             {areasLoading
               ? "..."
@@ -228,31 +230,37 @@ const Dashboard = () => {
             registered user has worked yet. "View list" opens the same squares
             as a list. */}
         <div
-          className={`rounded-xl border bg-card p-4 shadow-md ${
+          className={`rounded-xl border bg-card px-4 py-3 shadow-md ${
             showRareOnMap ? "border-red-400 bg-red-50/60" : "border-border"
           }`}
         >
-          <Button
-            variant="ghost"
-            className="h-auto w-full justify-start gap-3 whitespace-normal p-0 text-left hover:bg-transparent"
-            aria-pressed={showRareOnMap}
-            onClick={() => setShowRareOnMap((value) => !value)}
-          >
-            <span className="text-left">
-              <span className="flex items-center gap-3 text-xl font-semibold">
-                <span className="mr-1">Rare squares</span>
+          {/* "View list" is placed over the right end of the LAST line of the
+              text (absolute, so the text layout is unchanged). */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              className="h-auto w-full flex-col items-start gap-0 whitespace-normal rounded-md p-0 text-left shadow-none hover:bg-transparent hover:shadow-none active:shadow-none"
+              aria-pressed={showRareOnMap}
+              onClick={() => setShowRareOnMap((value) => !value)}
+            >
+              {/* Badges at the right end of the row, so the green one lines up
+                  with the right edge of "View list" below */}
+              <span className="flex w-full items-center justify-between gap-3 whitespace-nowrap text-lg font-semibold">
+                Rare squares
                 {unworkedData && (
-                  <>
+                  <span className="flex items-center gap-2">
                     <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-sm font-bold text-white">
                       {unworkedData.total_unworked}
                     </span>
                     <span className="rounded-full bg-green-600 px-2.5 py-0.5 text-sm font-bold text-white">
                       {unworkedData.worked_areas.length}
                     </span>
-                  </>
+                  </span>
                 )}
               </span>
-              <span className="block text-sm font-normal text-muted-foreground">
+              {/* text-justify: the lines reach the right edge, so "View list"
+                  (right-aligned on the last line) lines up with the row above */}
+              <span className="block w-full text-justify text-sm font-normal leading-snug text-muted-foreground">
                 {showRareOnMap ? (
                   <>
                     <span className="block">
@@ -277,16 +285,28 @@ const Dashboard = () => {
                   </>
                 )}
               </span>
-            </span>
-          </Button>
-          <Button
-            variant="link"
-            size="sm"
-            className="mt-1 h-auto p-0"
-            onClick={() => setRareDialogOpen(true)}
-          >
-            View list
-          </Button>
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              // A real (filled) button. Absolute, and pushed a little below the
+              // last text line so it does not touch the line above it.
+              className="absolute -bottom-1.5 right-0 h-[26px] px-4 py-0 text-sm font-semibold"
+              onClick={() => setRareDialogOpen(true)}
+            >
+              View list
+            </Button>
+          </div>
+          {/* How many users have uploaded a log - numbers only, never who. */}
+          {unworkedData && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              (
+              <span className="font-bold text-green-600">
+                {unworkedData.users_with_logs}
+              </span>{" "}
+              of {unworkedData.registered_users} users have uploaded a log)
+            </p>
+          )}
         </div>
       </div>
 
