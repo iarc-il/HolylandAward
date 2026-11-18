@@ -22,11 +22,22 @@ def clean_callsign(callsign: str) -> str:
 
 
 class AdifService:
-    def __init__(self, qsos, spotter_callsigns: list[str]):
+    def __init__(
+        self,
+        qsos,
+        spotter_callsigns: list[str],
+        default_spotter: str | None = None,
+    ):
         self.qsos = [self._get_required_fields(self._qso_to_dict(qso)) for qso in qsos]
         self.spotter_callsigns = {
             self._clean_callsign(callsign) for callsign in spotter_callsigns if callsign
         }
+        # Some programs (e.g. ADIF Studio) export QSOs with neither a
+        # STATION_CALLSIGN nor an OPERATOR. The file then does not say whose
+        # log it is, so such QSOs are counted for the user who uploads it.
+        self.default_spotter = (
+            self._clean_callsign(default_spotter) if default_spotter else ""
+        )
 
     def _qso_to_dict(self, qso) -> dict:
         """
@@ -117,6 +128,8 @@ class AdifService:
         station_callsign = self._clean_callsign(qso_dict.get("STATION_CALLSIGN", ""))
         operator = self._clean_callsign(qso_dict.get("OPERATOR", ""))
 
+        if not station_callsign and not operator:
+            return self.default_spotter
         if station_callsign in self.spotter_callsigns:
             return station_callsign
         elif operator in self.spotter_callsigns:
