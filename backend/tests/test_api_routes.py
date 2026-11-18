@@ -833,8 +833,11 @@ def test_unworked_areas_excludes_squares_worked_by_any_registered_user(
         "total_squares",
         "total_unworked",
         "registered_users",
+        "users_with_logs",
     }
     assert body["registered_users"] == 2
+    # both users have logged squares (one under an old callsign)
+    assert body["users_with_logs"] == 2
 
 
 def test_worked_and_unworked_areas_exactly_match_the_logs_for_every_square(
