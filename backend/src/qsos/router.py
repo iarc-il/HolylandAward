@@ -6,6 +6,7 @@ from database import get_db
 from utils import verify_clerk_session
 from area_grids import AREAS
 from users.repository import (
+    count_users,
     get_all_registered_callsigns,
     get_callsigns_for_user,
     get_user_by_clerk_id,
@@ -77,6 +78,7 @@ def get_unworked_areas(
         "worked_areas": worked_areas,
         "total_squares": len(all_squares),
         "total_unworked": len(unworked),
+        "registered_users": count_users(db),
     }
 
 

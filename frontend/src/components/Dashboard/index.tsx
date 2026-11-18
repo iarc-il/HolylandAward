@@ -269,8 +269,11 @@ const Dashboard = () => {
                   </>
                 ) : (
                   <>
-                    <b>Click</b> to show on the map the squares nobody has
-                    worked
+                    <b>Click</b> to show on the map squares that none of the{" "}
+                    {typeof unworkedData?.registered_users === "number" && (
+                      <b>{unworkedData.registered_users} </b>
+                    )}
+                    registered users have worked
                   </>
                 )}
               </span>
