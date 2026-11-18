@@ -25,8 +25,10 @@ from users.repository import (
     search_users,
     count_users,
     list_users_paginated,
+    get_user_ids_with_logs,
 )
 from users.schema import (
+    AdminUserResponse,
     CallsignChangeRequestCreate,
     CallsignChangeRequestResponse,
     CallsignChangeRequestAction,
@@ -392,6 +394,12 @@ async def update_region(
     return UserResponse.model_validate(updated_user)
 
 
+def _admin_user(user, ids_with_logs: set[int]) -> AdminUserResponse:
+    response = AdminUserResponse.model_validate(user)
+    response.has_uploaded_log = user.id in ids_with_logs
+    return response
+
+
 @router.get("/admin/users")
 async def admin_list_users(
     page: int = Query(1, ge=1),
@@ -402,9 +410,12 @@ async def admin_list_users(
     total = count_users(db)
     users = list_users_paginated(db, page, page_size)
     total_pages = ceil(total / page_size) if total else 0
+    ids_with_logs = get_user_ids_with_logs(db)
     return {
-        "users": [UserResponse.model_validate(u) for u in users],
+        "users": [_admin_user(u, ids_with_logs) for u in users],
         "total": total,
+        # across ALL users, not just this page
+        "users_with_logs": len(ids_with_logs),
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
@@ -418,8 +429,9 @@ async def admin_search_users(
     admin_id: str = Depends(verify_admin),
 ):
     users = search_users(db, q)
+    ids_with_logs = get_user_ids_with_logs(db)
     return {
-        "users": [UserResponse.model_validate(u) for u in users],
+        "users": [_admin_user(u, ids_with_logs) for u in users],
         "total": len(users),
     }
 

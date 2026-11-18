@@ -16,6 +16,7 @@ import MyQsosPage from "./components/MyQsosPage";
 import AdminPage from "./components/AdminPage";
 import RequireAdmin from "./components/RequireAdmin";
 import MaintenancePage from "./components/MaintenancePage";
+import NewVersionBanner from "./components/NewVersionBanner";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useProfile } from "@/api/useProfile";
 import { usePresenceHeartbeat } from "@/api/usePresenceHeartbeat";
@@ -187,6 +188,7 @@ const App = () => {
           <AppLayout />
         </SidebarProvider>
         <Toaster />
+        <NewVersionBanner />
       </BrowserRouter>
     </QueryClientProvider>
   );
