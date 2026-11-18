@@ -854,3 +854,46 @@ def test_worked_and_unworked_areas_exactly_match_the_logs_for_every_square(
     assert not set(body["worked_areas"]) & set(body["areas"])
     assert len(body["worked_areas"]) + len(body["areas"]) == len(all_squares)
     assert "X99ZZ" not in body["worked_areas"] + body["areas"]
+
+
+def test_admin_user_list_and_search_show_who_uploaded_a_log(client, db_session):
+    async def override_verify_admin():
+        return "admin_1"
+
+    app.dependency_overrides[verify_admin] = override_verify_admin
+
+    create_user(db_session, callsign="4Z1ABC", region=1)  # uploaded under own callsign
+    renamed = Users(clerk_user_id="user_2", callsign="4Z2NEW", region=1)
+    nolog = Users(clerk_user_id="user_3", callsign="4Z3NON", region=1)
+    db_session.add_all([renamed, nolog])
+    db_session.commit()
+    # user 2 uploaded only under an old callsign
+    db_session.add(
+        LinkedCallsigns(user_id=renamed.id, old_callsign="4X9OLD", new_callsign="4Z2NEW")
+    )
+    db_session.add_all(
+        [
+            QSOLogs(date="20240101", freq=1.0, spotter="4Z1ABC", dx="W1", area="H08HF"),
+            QSOLogs(date="20240101", freq=1.0, spotter="4Z1ABC", dx="W1", area="J05HF"),
+            QSOLogs(date="20240101", freq=1.0, spotter="4X9OLD", dx="W1", area="A22BS"),
+            # a callsign of nobody registered does not count for anyone
+            QSOLogs(date="20240101", freq=1.0, spotter="W9GONE", dx="W1", area="B22BS"),
+        ]
+    )
+    db_session.commit()
+
+    listing = client.get("/admin/users").json()
+    by_callsign = {u["callsign"]: u["has_uploaded_log"] for u in listing["users"]}
+    assert by_callsign == {"4Z1ABC": True, "4Z2NEW": True, "4Z3NON": False}
+    assert listing["users_with_logs"] == 2
+    assert listing["total"] == 3
+
+    # the count covers ALL users even when only one page is returned
+    page = client.get("/admin/users?page=1&page_size=1").json()
+    assert len(page["users"]) == 1
+    assert page["users_with_logs"] == 2
+
+    search = client.get("/admin/users/search?q=4Z3").json()
+    assert [(u["callsign"], u["has_uploaded_log"]) for u in search["users"]] == [
+        ("4Z3NON", False)
+    ]

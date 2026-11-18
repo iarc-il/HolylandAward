@@ -511,9 +511,23 @@ const AllUsersSection = () => {
     <section className="rounded-xl border border-border bg-card p-6 shadow-md">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Registered Users</h2>
+          <h2 className="text-xl font-semibold">
+            Registered Users
+            {listData && (
+              <span className="ml-3 font-bold">{listData.total}</span>
+            )}
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            All users registered in the system.
+            {listData ? (
+              <>
+                <span className="font-bold text-green-600">
+                  {listData.users_with_logs}
+                </span>{" "}
+                of {listData.total} users have uploaded a log
+              </>
+            ) : (
+              "All users registered in the system."
+            )}
           </p>
         </div>
         <Users className="h-5 w-5 text-muted-foreground" />
@@ -561,11 +575,18 @@ const AllUsersSection = () => {
                       {user.email || user.username || user.clerk_user_id}
                     </p>
                   </div>
-                  {user.region !== null && user.region !== undefined && (
-                    <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      {getRegionLabel(user.region)}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {user.has_uploaded_log && (
+                      <span className="rounded-full border border-green-300 bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        Log uploaded
+                      </span>
+                    )}
+                    {user.region !== null && user.region !== undefined && (
+                      <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                        {getRegionLabel(user.region)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

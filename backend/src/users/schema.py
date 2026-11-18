@@ -30,6 +30,11 @@ class UserResponse(BaseModel):
     linked_callsigns: list[LinkedCallsignResponse] = Field(default_factory=list)
 
 
+class AdminUserResponse(UserResponse):
+    # True when the user has uploaded at least one QSO (under any of their callsigns)
+    has_uploaded_log: bool = False
+
+
 class LinkedCallsignClaimRequest(BaseModel):
     callsign: str
 

@@ -75,6 +75,31 @@ def get_all_registered_callsigns(db: Session) -> list[str]:
     return sorted(callsigns)
 
 
+def get_user_ids_with_logs(db: Session) -> set[int]:
+    """Ids of users that have at least one QSO in the logs, under their
+    current callsign or any old/linked one."""
+    from qsos.models import QSOLogs
+
+    owners: dict[str, int] = {}
+    for callsign, user_id in db.query(Users.callsign, Users.id).filter(
+        Users.callsign.isnot(None)
+    ):
+        owners[callsign] = user_id
+    for old_callsign, new_callsign, user_id in db.query(
+        LinkedCallsigns.old_callsign,
+        LinkedCallsigns.new_callsign,
+        LinkedCallsigns.user_id,
+    ):
+        owners.setdefault(old_callsign, user_id)
+        owners.setdefault(new_callsign, user_id)
+
+    return {
+        owners[spotter]
+        for (spotter,) in db.query(QSOLogs.spotter).distinct()
+        if spotter in owners
+    }
+
+
 def add_linked_callsign(
     db: Session, user_id: int, old_callsign: str, new_callsign: str
 ) -> None:
