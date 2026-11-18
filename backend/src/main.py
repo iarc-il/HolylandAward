@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
 from adif_service import AdifService
 from database import get_db, SessionLocal
-from qsos.repository import insert_qsos, get_areas_by_spotter
+from qsos.repository import insert_qsos, get_areas_by_spotter, get_areas_by_spotters
 from qsos.schema import QSO
 from users.router import router as users_router
 from users.admin_router import router as admin_router
@@ -152,8 +152,21 @@ async def upload_file(
 
     contents = await file.read()
     qsos = _parse_adif(contents)
-    adif_service = AdifService(qsos, spotter_callsigns=spotter_callsigns)
+    adif_service = AdifService(
+        qsos, spotter_callsigns=spotter_callsigns, default_spotter=spotter_callsign
+    )
     valid_entries = adif_service.get_valid_entries()
+    # So the result message can say what the file contained, not only what
+    # was new: squares found in the file, and how many of them the user did
+    # not have yet (under any of their callsigns).
+    squares_in_file = {entry["area"] for entry in valid_entries}
+    already_have = set(get_areas_by_spotters(db, spotter_callsigns))
+    new_squares = squares_in_file - already_have
+    qsos_without_callsign = sum(
+        1
+        for qso in adif_service.qsos
+        if not qso.get("STATION_CALLSIGN") and not qso.get("OPERATOR")
+    )
     # Callsigns in the file that are not the user's (e.g. an old callsign) -
     # the frontend offers to link them instead of silently dropping the QSOs.
     unmatched_callsigns = adif_service.get_unmatched_callsigns()
@@ -177,6 +190,10 @@ async def upload_file(
     return {
         "total_qsos": len(saved_qsos),
         "callsign": spotter_callsign,
+        "qsos_in_file": len(adif_service.qsos),
+        "squares_in_file": len(squares_in_file),
+        "new_squares": len(new_squares),
+        "qsos_without_callsign": qsos_without_callsign,
         "unmatched_callsigns": unmatched_callsigns,
         "qsos": [
             {

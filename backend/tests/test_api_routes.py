@@ -645,6 +645,10 @@ def test_upload_file_parses_and_returns_inserted_qsos(
     assert response.json() == {
         "total_qsos": 1,
         "callsign": "4Z1ABC",
+        "qsos_in_file": 1,
+        "squares_in_file": 1,
+        "new_squares": 1,
+        "qsos_without_callsign": 0,
         "unmatched_callsigns": [],
         "qsos": [
             {
@@ -904,3 +908,51 @@ def test_admin_user_list_and_search_show_who_uploaded_a_log(client, db_session):
     assert [(u["callsign"], u["has_uploaded_log"]) for u in search["users"]] == [
         ("4Z3NON", False)
     ]
+
+
+def test_upload_without_station_callsign_counts_for_uploader_and_reports_counts(
+    client, db_session, monkeypatch
+):
+    """ADIF Studio exports QSOs with no STATION_CALLSIGN/OPERATOR at all."""
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    # already has H08HF; the file has H08HF (known), J05HF and F14PT (new)
+    db_session.add(
+        QSOLogs(date="20230101", freq=1.0, spotter="4Z1ABC", dx="W1", area="H08HF")
+    )
+    db_session.commit()
+    records = [
+        "<CALL:5>4X1AA <QSO_DATE:8>20220416 <FREQ:6>7.1300 <SRX_STRING:5>H08HF",
+        "<CALL:5>4X1BB <QSO_DATE:8>20220416 <FREQ:6>7.1300 <SRX_STRING:5>J05HF",
+        "<CALL:5>4X1CC <QSO_DATE:8>20220416 <FREQ:6>7.1300 <SRX_STRING:5>F14PT",
+        "<CALL:5>4X1DD <QSO_DATE:8>20220416 <FREQ:6>7.1300 <RST_RCVD:2>59",  # no square
+    ]
+    monkeypatch.setattr(
+        main_module.adif_io, "read_from_string", lambda s: (records, {})
+    )
+
+    def fake_insert_qsos(db, qsos):
+        # like the real insert: a (spotter, area) already stored is skipped
+        return [
+            SimpleNamespace(
+                id=i, date=q.date, freq=q.freq, spotter=q.spotter, dx=q.dx, area=q.area
+            )
+            for i, q in enumerate(qsos, start=100)
+            if q.area != "H08HF"
+        ]
+
+    monkeypatch.setattr(main_module, "insert_qsos", fake_insert_qsos)
+
+    response = client.post(
+        "/read-file", files={"file": ("export.adi", b"x", "text/plain")}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["qsos_in_file"] == 4
+    assert body["qsos_without_callsign"] == 4
+    assert body["squares_in_file"] == 3
+    assert body["new_squares"] == 2
+    assert body["total_qsos"] == 2  # H08HF was already stored
+    assert {q["spotter"] for q in body["qsos"]} == {"4Z1ABC"}
+    assert {q["area"] for q in body["qsos"]} == {"J05HF", "F14PT"}
+    assert body["unmatched_callsigns"] == []

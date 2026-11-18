@@ -18,6 +18,10 @@ type QSO = {
 type UploadResponse = {
   total_qsos: number;
   callsign: string;
+  qsos_in_file?: number;
+  squares_in_file?: number;
+  new_squares?: number;
+  qsos_without_callsign?: number;
   unmatched_callsigns?: { callsign: string; qsos: number }[];
   qsos: QSO[];
 };
