@@ -823,7 +823,14 @@ def test_unworked_areas_excludes_squares_worked_by_any_registered_user(
     assert "B22BS" in body["areas"]
     # nothing about who worked what is exposed
     assert set(body["worked_areas"]) == {"H08HF", "J05HF", "A22BS"}
-    assert set(body) == {"areas", "worked_areas", "total_squares", "total_unworked"}
+    assert set(body) == {
+        "areas",
+        "worked_areas",
+        "total_squares",
+        "total_unworked",
+        "registered_users",
+    }
+    assert body["registered_users"] == 2
 
 
 def test_worked_and_unworked_areas_exactly_match_the_logs_for_every_square(

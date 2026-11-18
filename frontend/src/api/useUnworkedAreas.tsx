@@ -7,6 +7,7 @@ interface UnworkedAreas {
   worked_areas: string[]; // squares at least one registered user has worked
   total_squares: number;
   total_unworked: number;
+  registered_users: number; // how many users the squares were checked against
 }
 
 // Squares that no registered user has worked yet (square codes only - the
