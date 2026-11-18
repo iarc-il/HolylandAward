@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
 from utils import verify_clerk_session
-from users.repository import get_callsigns_for_user, get_user_by_clerk_id
+from area_grids import AREAS
+from users.repository import (
+    get_all_registered_callsigns,
+    get_callsigns_for_user,
+    get_user_by_clerk_id,
+)
 from qsos.repository import (
     count_qsos_by_spotters,
     delete_qsos_by_ids_and_spotters,
@@ -47,6 +52,31 @@ def get_user_areas_and_regions(
         "regions": regions,
         "total_areas": len(areas),
         "total_regions": len(regions),
+    }
+
+
+@router.get("/unworked-areas")
+def get_unworked_areas(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(verify_clerk_session),
+):
+    """
+    Squares of the award that no registered user has worked yet ("areas"),
+    and the ones at least one registered user has worked ("worked_areas").
+
+    Only square codes are returned - never who worked what - so every user
+    may see it.
+    """
+    worked = set(get_areas_by_spotters(db, get_all_registered_callsigns(db)))
+    all_squares = [square for squares in AREAS.values() for square in squares]
+    unworked = sorted(square for square in all_squares if square not in worked)
+    worked_areas = sorted(square for square in all_squares if square in worked)
+
+    return {
+        "areas": unworked,
+        "worked_areas": worked_areas,
+        "total_squares": len(all_squares),
+        "total_unworked": len(unworked),
     }
 
 

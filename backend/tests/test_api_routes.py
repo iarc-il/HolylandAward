@@ -786,3 +786,71 @@ def test_callsign_request_emails_admin(client, db_session, monkeypatch):
     assert len(calls) == 1
     assert "4Z1OLD -> 4Z1NEW" in calls[0][0]
     assert "4Z1NEW" in calls[0][1]
+
+
+def test_unworked_areas_excludes_squares_worked_by_any_registered_user(
+    client, db_session
+):
+    from area_grids import AREAS
+
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    other = Users(clerk_user_id="user_2", callsign="4Z2XYZ", region=1)
+    db_session.add(other)
+    db_session.commit()
+    db_session.add(
+        LinkedCallsigns(user_id=other.id, old_callsign="4X9OLD", new_callsign="4Z2XYZ")
+    )
+    db_session.add_all(
+        [
+            QSOLogs(date="20240101", freq=14.25, spotter="4Z1ABC", dx="W1ABC", area="H08HF"),
+            QSOLogs(date="20240101", freq=14.25, spotter="4Z2XYZ", dx="W1ABC", area="J05HF"),
+            # worked under an old callsign of a registered user - still counts
+            QSOLogs(date="20240101", freq=14.25, spotter="4X9OLD", dx="W1ABC", area="A22BS"),
+            # a callsign nobody registered (e.g. a deleted user) does not count
+            QSOLogs(date="20240101", freq=14.25, spotter="W9GONE", dx="W1ABC", area="B22BS"),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/qsos/unworked-areas")
+
+    assert response.status_code == 200
+    body = response.json()
+    total = sum(len(squares) for squares in AREAS.values())
+    assert body["total_squares"] == total
+    assert body["total_unworked"] == total - 3
+    assert not {"H08HF", "J05HF", "A22BS"} & set(body["areas"])
+    assert "B22BS" in body["areas"]
+    # nothing about who worked what is exposed
+    assert set(body["worked_areas"]) == {"H08HF", "J05HF", "A22BS"}
+    assert set(body) == {"areas", "worked_areas", "total_squares", "total_unworked"}
+
+
+def test_worked_and_unworked_areas_exactly_match_the_logs_for_every_square(
+    client, db_session
+):
+    """Green (worked_areas) = squares in the logs; red (areas) = all others."""
+    from area_grids import AREAS
+
+    create_user(db_session, callsign="4Z1ABC", region=1)
+    all_squares = [s for squares in AREAS.values() for s in squares]
+    logged = set(all_squares[::2])  # every second square of the whole award
+    db_session.add_all(
+        [
+            QSOLogs(date="20240101", freq=14.25, spotter="4Z1ABC", dx="W1ABC", area=s)
+            for s in logged
+        ]
+    )
+    # a logged square that is not part of the award never appears in either list
+    db_session.add(
+        QSOLogs(date="20240101", freq=14.25, spotter="4Z1ABC", dx="W1ABC", area="X99ZZ")
+    )
+    db_session.commit()
+
+    body = client.get("/qsos/unworked-areas").json()
+
+    assert set(body["worked_areas"]) == logged
+    assert set(body["areas"]) == set(all_squares) - logged
+    assert not set(body["worked_areas"]) & set(body["areas"])
+    assert len(body["worked_areas"]) + len(body["areas"]) == len(all_squares)
+    assert "X99ZZ" not in body["worked_areas"] + body["areas"]
