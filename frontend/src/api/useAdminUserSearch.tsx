@@ -10,6 +10,7 @@ export interface AdminUserResult {
   username: string | null;
   callsign: string | null;
   region: number | null;
+  has_uploaded_log?: boolean; // at least one QSO uploaded (any of their callsigns)
 }
 
 export interface AdminUserSearchResponse {

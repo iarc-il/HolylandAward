@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api";
 export interface AdminUsersListResponse {
   users: AdminUserResult[];
   total: number;
+  users_with_logs: number; // across all users, not just this page
   page: number;
   page_size: number;
   total_pages: number;
